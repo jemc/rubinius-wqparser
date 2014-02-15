@@ -100,9 +100,9 @@ class RubiniusBuilder < Parser::Builders::Default
   
   # # def __FILE__(__FILE__t) end
   
-  # def accessible(node)
-  #   node
-  # end
+  def accessible(node)
+    node
+  end
   
 private
   
@@ -126,11 +126,14 @@ private
 end
 
 
-pr = Parser::CurrentRuby.new RubiniusBuilder.new
+class String
+  def to_sexp
+    pr = Parser::CurrentRuby.new RubiniusBuilder.new
 
-buffer = Parser::Source::Buffer.new('(string)')
-buffer.source = "55"
-
-p pr.parse buffer
-
-# p RBX::AST::TrueLiteral.new 88
+    buffer = Parser::Source::Buffer.new('(string)')
+    buffer.source = self
+    
+    node = pr.parse buffer
+    node.to_sexp
+  end
+end
