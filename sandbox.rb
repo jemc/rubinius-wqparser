@@ -614,42 +614,12 @@ class RubiniusBuilder < Parser::Builders::Default
   def match_op(receiver, match_t, arg)
     line = receiver.line
     
-    RBX::AST::Match2.new line, receiver, arg
-    # source_map = send_binary_op_map(receiver, match_t, arg)
-
-    # if receiver.type == :regexp &&
-    #       receiver.children.count == 2 &&
-    #       receiver.children.first.type == :str
-
-    #   str_node, opt_node = *receiver
-    #   regexp_body, = *str_node
-    #   *regexp_opt  = *opt_node
-
-    #   if defined?(Encoding)
-    #     regexp_body = case
-    #     when regexp_opt.include?(:u)
-    #       regexp_body.encode(Encoding::UTF_8)
-    #     when regexp_opt.include?(:e)
-    #       regexp_body.encode(Encoding::EUC_JP)
-    #     when regexp_opt.include?(:s)
-    #       regexp_body.encode(Encoding::WINDOWS_31J)
-    #     when regexp_opt.include?(:n)
-    #       regexp_body.encode(Encoding::BINARY)
-    #     else
-    #       regexp_body
-    #     end
-    #   end
-
-    #   Regexp.new(regexp_body).names.each do |name|
-    #     @parser.static_env.declare(name)
-    #   end
-
-    #   n(:match_with_lvasgn, [ receiver, arg ],
-    #     source_map)
-    # else
-    #   n(:send, [ receiver, :=~, arg ],
-    #     source_map)
-    # end
+    if receiver.is_a? RBX::AST::DynamicRegex \
+    or receiver.is_a? RBX::AST::RegexLiteral
+      RBX::AST::Match2.new line, receiver, arg
+    else
+      RBX::AST::Match3.new line, arg, receiver
+    end
   end
 
   # def unary_op(op_t, receiver)
@@ -704,11 +674,9 @@ class RubiniusBuilder < Parser::Builders::Default
   
   # Conditionals
 
-  # def condition(cond_t, cond, then_t,
-  #               if_true, else_t, if_false, end_t)
-  #   n(:if, [ check_condition(cond), if_true, if_false ],
-  #     condition_map(cond_t, cond, then_t, if_true, else_t, if_false, end_t))
-  # end
+  def condition(cond_t, cond, then_t, if_true, else_t, if_false, end_t)
+    RBX::AST::If.new line(cond_t), check_condition(cond), if_true, if_false
+  end
   
   def condition_mod(if_true, if_false, cond_t, cond)
     RBX::AST::If.new line(cond_t), check_condition(cond), if_true, if_false

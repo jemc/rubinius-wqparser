@@ -1,0 +1,1 @@
+fails:"A Match3 node is parsed from \n    a = 'abc'\n    if a =~ /#{a}/\n      1\n    end"
