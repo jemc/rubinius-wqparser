@@ -396,10 +396,9 @@ class RubiniusBuilder < Parser::Builders::Default
     node
   end
   
-  # def const(name_t)
-  #   n(:const, [ nil, value(name_t).to_sym ],
-  #     constant_map(nil, nil, name_t))
-  # end
+  def const(token)
+    RBX::AST::ConstantAccess.new line(token), value(token).to_sym
+  end
 
   # def const_global(t_colon3, name_t)
   #   cbase = n0(:cbase, token_map(t_colon3))
@@ -408,10 +407,28 @@ class RubiniusBuilder < Parser::Builders::Default
   #     constant_map(cbase, t_colon3, name_t))
   # end
 
-  # def const_fetch(scope, t_colon2, name_t)
-  #   n(:const, [ scope, value(name_t).to_sym ],
-  #     constant_map(scope, t_colon2, name_t))
-  # end
+  def const_fetch(outer, t_colon2, token)
+    line = line(token)
+    name = value(token).to_sym
+    
+    if outer
+      if outer.kind_of? RBX::AST::ConstantAccess and
+         outer.name == :Rubinius
+        case name
+        when :Type
+          RBX::AST::TypeConstant.new line
+        when :Mirror
+          RBX::AST::MirrorConstant.new line
+        else
+          RBX::AST::ScopedConstant.new line, outer, name
+        end
+      else
+        RBX::AST::ScopedConstant.new line, outer, name
+      end
+    else
+      RBX::AST::ConstantAccess.new line, name
+    end
+  end
 
   # def __ENCODING__(__ENCODING__t)
   #   n0(:__ENCODING__,
@@ -622,6 +639,6 @@ class String
   end
 end
 
-    # p "1 if /x/".to_sexp
-    # p [:if, [:match, [:regex, "x", 0]], [:lit, 1], nil]
+    # p "X::Y".to_sexp
+    # p [:colon2, [:const, :X], :Y]
     
