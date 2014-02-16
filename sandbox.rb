@@ -199,162 +199,104 @@ class RubiniusBuilder < Parser::Builders::Default
   end
   
   
-  
-  #
-  # Method calls
-  #
-  
-  def call_method(receiver, dot_t, selector_t,
-                  lparen_t=nil, args=[], rparen_t=nil)
-    line = receiver.line
-    name = value(selector_t).to_sym
-    
-    if args.empty?
-      RBX::AST::Send.new line, receiver, name
-    else
-      args = RBX::AST::ArrayLiteral.new line, args
-      RBX::AST::SendWithArguments.new line, receiver, name, args
-      # require 'pry'
-      # binding.pry
-      # x
-    end
-  end
+  # Arrays
 
-  # def call_lambda(lambda_t)
-  #   n(:send, [ nil, :lambda ],
-  #     send_map(nil, nil, lambda_t))
+  # def array(begin_t, elements, end_t)
+  #   n(:array, elements,
+  #     collection_map(begin_t, elements, end_t))
   # end
 
-  # def block(method_call, begin_t, args, body, end_t)
-  #   _receiver, _selector, *call_args = *method_call
-
-  #   if method_call.type == :yield
-  #     diagnostic :error, :block_given_to_yield, nil, method_call.loc.keyword, [loc(begin_t)]
-  #   end
-
-  #   last_arg = call_args.last
-  #   if last_arg && last_arg.type == :block_pass
-  #     diagnostic :error, :block_and_blockarg, nil, last_arg.loc.expression, [loc(begin_t)]
-  #   end
-
-  #   if [:send, :super, :zsuper].include?(method_call.type)
-  #     n(:block, [ method_call, args, body ],
-  #       block_map(method_call.loc.expression, begin_t, end_t))
+  # def splat(star_t, arg=nil)
+  #   if arg.nil?
+  #     n0(:splat,
+  #       unary_op_map(star_t))
   #   else
-  #     # Code like "return foo 1 do end" is reduced in a weird sequence.
-  #     # Here, method_call is actually (return).
-  #     actual_send, = *method_call
-  #     block =
-  #       n(:block, [ actual_send, args, body ],
-  #         block_map(actual_send.loc.expression, begin_t, end_t))
-
-  #     n(method_call.type, [ block ],
-  #       method_call.loc.with_expression(join_exprs(method_call, block)))
+  #     n(:splat, [ arg ],
+  #       unary_op_map(star_t, arg))
   #   end
   # end
 
-  # def block_pass(amper_t, arg)
-  #   n(:block_pass, [ arg ],
-  #     unary_op_map(amper_t, arg))
-  # end
-
-  # def attr_asgn(receiver, dot_t, selector_t)
-  #   method_name = (value(selector_t) + '=').to_sym
-
-  #   # Incomplete method call.
-  #   n(:send, [ receiver, method_name ],
-  #     send_map(receiver, dot_t, selector_t))
-  # end
-
-  # def index(receiver, lbrack_t, indexes, rbrack_t)
-  #   n(:send, [ receiver, :[], *indexes ],
-  #     send_index_map(receiver, lbrack_t, rbrack_t))
-  # end
-
-  # def index_asgn(receiver, lbrack_t, indexes, rbrack_t)
-  #   # Incomplete method call.
-  #   n(:send, [ receiver, :[]=, *indexes ],
-  #     send_index_map(receiver, lbrack_t, rbrack_t))
-  # end
-
-  def binary_op(receiver, operator_t, arg)
-    line = receiver.line
-    name = value(operator_t).to_sym
-    
-    RBX::AST::SendWithArguments.new line, receiver, name, arg
-  end
-
-  # def match_op(receiver, match_t, arg)
-  #   source_map = send_binary_op_map(receiver, match_t, arg)
-
-  #   if receiver.type == :regexp &&
-  #         receiver.children.count == 2 &&
-  #         receiver.children.first.type == :str
-
-  #     str_node, opt_node = *receiver
-  #     regexp_body, = *str_node
-  #     *regexp_opt  = *opt_node
-
-  #     if defined?(Encoding)
-  #       regexp_body = case
-  #       when regexp_opt.include?(:u)
-  #         regexp_body.encode(Encoding::UTF_8)
-  #       when regexp_opt.include?(:e)
-  #         regexp_body.encode(Encoding::EUC_JP)
-  #       when regexp_opt.include?(:s)
-  #         regexp_body.encode(Encoding::WINDOWS_31J)
-  #       when regexp_opt.include?(:n)
-  #         regexp_body.encode(Encoding::BINARY)
-  #       else
-  #         regexp_body
-  #       end
-  #     end
-
-  #     Regexp.new(regexp_body).names.each do |name|
-  #       @parser.static_env.declare(name)
-  #     end
-
-  #     n(:match_with_lvasgn, [ receiver, arg ],
-  #       source_map)
+  # def word(parts)
+  #   if collapse_string_parts?(parts)
+  #     parts.first
   #   else
-  #     n(:send, [ receiver, :=~, arg ],
-  #       source_map)
+  #     n(:dstr, [ *parts ],
+  #       collection_map(nil, parts, nil))
   #   end
   # end
 
-  # def unary_op(op_t, receiver)
-  #   case value(op_t)
-  #   when '+', '-'
-  #     method = value(op_t) + '@'
-  #   else
-  #     method = value(op_t)
-  #   end
-
-  #   n(:send, [ receiver, method.to_sym ],
-  #     send_unary_op_map(op_t, receiver))
+  # def words_compose(begin_t, parts, end_t)
+  #   n(:array, [ *parts ],
+  #     collection_map(begin_t, parts, end_t))
   # end
 
-  # def not_op(not_t, begin_t=nil, receiver=nil, end_t=nil)
-  #   if @parser.version == 18
-  #     n(:not, [ receiver ],
-  #       unary_op_map(not_t, receiver))
-  #   else
-  #     if receiver.nil?
-  #       nil_node = n0(:begin, collection_map(begin_t, nil, end_t))
-
-  #       n(:send, [
-  #         nil_node, :'!'
-  #       ], send_unary_op_map(not_t, nil_node))
+  # def symbols_compose(begin_t, parts, end_t)
+  #   parts = parts.map do |part|
+  #     case part.type
+  #     when :str
+  #       value, = *part
+  #       part.updated(:sym, [ value.to_sym ])
+  #     when :dstr
+  #       part.updated(:dsym)
   #     else
-  #       n(:send, [ receiver, :'!' ],
-  #         send_unary_op_map(not_t, receiver))
+  #       part
   #     end
+  #   end
+
+  #   n(:array, [ *parts ],
+  #     collection_map(begin_t, parts, end_t))
+  # end
+
+  # Hashes
+
+  # def pair(key, assoc_t, value)
+  #   n(:pair, [ key, value ],
+  #     binary_op_map(key, assoc_t, value))
+  # end
+
+  # def pair_list_18(list)
+  #   if list.size % 2 != 0
+  #     diagnostic :error, :odd_hash, nil, list.last.loc.expression
+  #   else
+  #     list.
+  #       each_slice(2).map do |key, value|
+  #         n(:pair, [ key, value ],
+  #           binary_op_map(key, nil, value))
+  #       end
   #   end
   # end
 
-  # #
-  # # Access
-  # #
+  # def pair_keyword(key_t, value)
+  #   key_map, pair_map = pair_keyword_map(key_t, value)
+
+  #   key = n(:sym, [ value(key_t).to_sym ], key_map)
+
+  #   n(:pair, [ key, value ], pair_map)
+  # end
+
+  # def kwsplat(dstar_t, arg)
+  #   n(:kwsplat, [ arg ],
+  #     unary_op_map(dstar_t, arg))
+  # end
+
+  # def associate(begin_t, pairs, end_t)
+  #   n(:hash, [ *pairs ],
+  #     collection_map(begin_t, pairs, end_t))
+  # end
+
+  # Ranges
+
+  def range_inclusive(lhs, dot2_t, rhs)
+    RBX::AST::Range.new line(dot2_t), lhs, rhs
+  end
+
+  def range_exclusive(lhs, dot3_t, rhs)
+    RBX::AST::RangeExclude.new line(dot3_t), lhs, rhs
+  end
+  
+  #
+  # Access
+  #
 
   # def self(token)
   #   n0(:self,
@@ -533,6 +475,159 @@ class RubiniusBuilder < Parser::Builders::Default
   #   n(:if, [ check_condition(cond), if_true, if_false ],
   #     ternary_map(cond, question_t, if_true, colon_t, if_false))
   # end
+
+  #
+  # Method calls
+  #
+  
+  def call_method(receiver, dot_t, selector_t,
+                  lparen_t=nil, args=[], rparen_t=nil)
+    line = receiver.line
+    name = value(selector_t).to_sym
+    
+    if args.empty?
+      RBX::AST::Send.new line, receiver, name
+    else
+      args = RBX::AST::ArrayLiteral.new line, args
+      RBX::AST::SendWithArguments.new line, receiver, name, args
+      # require 'pry'
+      # binding.pry
+      # x
+    end
+  end
+
+  # def call_lambda(lambda_t)
+  #   n(:send, [ nil, :lambda ],
+  #     send_map(nil, nil, lambda_t))
+  # end
+
+  # def block(method_call, begin_t, args, body, end_t)
+  #   _receiver, _selector, *call_args = *method_call
+
+  #   if method_call.type == :yield
+  #     diagnostic :error, :block_given_to_yield, nil, method_call.loc.keyword, [loc(begin_t)]
+  #   end
+
+  #   last_arg = call_args.last
+  #   if last_arg && last_arg.type == :block_pass
+  #     diagnostic :error, :block_and_blockarg, nil, last_arg.loc.expression, [loc(begin_t)]
+  #   end
+
+  #   if [:send, :super, :zsuper].include?(method_call.type)
+  #     n(:block, [ method_call, args, body ],
+  #       block_map(method_call.loc.expression, begin_t, end_t))
+  #   else
+  #     # Code like "return foo 1 do end" is reduced in a weird sequence.
+  #     # Here, method_call is actually (return).
+  #     actual_send, = *method_call
+  #     block =
+  #       n(:block, [ actual_send, args, body ],
+  #         block_map(actual_send.loc.expression, begin_t, end_t))
+
+  #     n(method_call.type, [ block ],
+  #       method_call.loc.with_expression(join_exprs(method_call, block)))
+  #   end
+  # end
+
+  # def block_pass(amper_t, arg)
+  #   n(:block_pass, [ arg ],
+  #     unary_op_map(amper_t, arg))
+  # end
+
+  # def attr_asgn(receiver, dot_t, selector_t)
+  #   method_name = (value(selector_t) + '=').to_sym
+
+  #   # Incomplete method call.
+  #   n(:send, [ receiver, method_name ],
+  #     send_map(receiver, dot_t, selector_t))
+  # end
+
+  # def index(receiver, lbrack_t, indexes, rbrack_t)
+  #   n(:send, [ receiver, :[], *indexes ],
+  #     send_index_map(receiver, lbrack_t, rbrack_t))
+  # end
+
+  # def index_asgn(receiver, lbrack_t, indexes, rbrack_t)
+  #   # Incomplete method call.
+  #   n(:send, [ receiver, :[]=, *indexes ],
+  #     send_index_map(receiver, lbrack_t, rbrack_t))
+  # end
+
+  def binary_op(receiver, operator_t, arg)
+    line = receiver.line
+    name = value(operator_t).to_sym
+    
+    RBX::AST::SendWithArguments.new line, receiver, name, arg
+  end
+
+  # def match_op(receiver, match_t, arg)
+  #   source_map = send_binary_op_map(receiver, match_t, arg)
+
+  #   if receiver.type == :regexp &&
+  #         receiver.children.count == 2 &&
+  #         receiver.children.first.type == :str
+
+  #     str_node, opt_node = *receiver
+  #     regexp_body, = *str_node
+  #     *regexp_opt  = *opt_node
+
+  #     if defined?(Encoding)
+  #       regexp_body = case
+  #       when regexp_opt.include?(:u)
+  #         regexp_body.encode(Encoding::UTF_8)
+  #       when regexp_opt.include?(:e)
+  #         regexp_body.encode(Encoding::EUC_JP)
+  #       when regexp_opt.include?(:s)
+  #         regexp_body.encode(Encoding::WINDOWS_31J)
+  #       when regexp_opt.include?(:n)
+  #         regexp_body.encode(Encoding::BINARY)
+  #       else
+  #         regexp_body
+  #       end
+  #     end
+
+  #     Regexp.new(regexp_body).names.each do |name|
+  #       @parser.static_env.declare(name)
+  #     end
+
+  #     n(:match_with_lvasgn, [ receiver, arg ],
+  #       source_map)
+  #   else
+  #     n(:send, [ receiver, :=~, arg ],
+  #       source_map)
+  #   end
+  # end
+
+  # def unary_op(op_t, receiver)
+  #   case value(op_t)
+  #   when '+', '-'
+  #     method = value(op_t) + '@'
+  #   else
+  #     method = value(op_t)
+  #   end
+
+  #   n(:send, [ receiver, method.to_sym ],
+  #     send_unary_op_map(op_t, receiver))
+  # end
+
+  # def not_op(not_t, begin_t=nil, receiver=nil, end_t=nil)
+  #   if @parser.version == 18
+  #     n(:not, [ receiver ],
+  #       unary_op_map(not_t, receiver))
+  #   else
+  #     if receiver.nil?
+  #       nil_node = n0(:begin, collection_map(begin_t, nil, end_t))
+
+  #       n(:send, [
+  #         nil_node, :'!'
+  #       ], send_unary_op_map(not_t, nil_node))
+  #     else
+  #       n(:send, [ receiver, :'!' ],
+  #         send_unary_op_map(not_t, receiver))
+  #     end
+  #   end
+  # end
+
   
   
   
@@ -555,7 +650,6 @@ class RubiniusBuilder < Parser::Builders::Default
       body
     end
   end
-
   
 private
   
@@ -639,6 +733,6 @@ class String
   end
 end
 
-    # p "::Y".to_sexp
-    # p [:colon3, :Y]
-    
+    # p "(a..b)".to_sexp
+    # p [:dot2, [:call, nil, :a, [:arglist]], [:call, nil, :b, [:arglist]]]
+    # 
