@@ -19,8 +19,8 @@ end
 
 desc "Run the specs"
 task :spec => dependencies do
-  # sh "mspec spec -G fails"
-  sh "mspec spec/true_spec.rb"
+  sh "mspec spec -G fails -f s"
+  # sh "mspec spec/true_spec.rb"
 end
 
 task :default => :spec
