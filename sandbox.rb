@@ -1,4 +1,5 @@
 
+require 'pry'
 require 'deco'
 
 require 'rubinius/toolset'
@@ -438,39 +439,128 @@ class RubiniusBuilder < Parser::Builders::Default
   # end
   
   #
-  # Control flow
+  # Class and module definition
   #
   
-  # Logical operations: and, or
-  
-  def logical_op(type, lhs, op_t, rhs)
-    line = line(op_t)
-    
-    case type
-    when :and
-      RBX::AST::And.new line, lhs, rhs
-    when :or
-      RBX::AST::Or.new line, lhs, rhs
-    else
-      raise 'booooom'
-    end
-  end
-  
-  # Conditionals
-
-  # def condition(cond_t, cond, then_t,
-  #               if_true, else_t, if_false, end_t)
-  #   n(:if, [ check_condition(cond), if_true, if_false ],
-  #     condition_map(cond_t, cond, then_t, if_true, else_t, if_false, end_t))
+  # def def_class(class_t, name, lt_t, superclass, body, end_t)
+  #   n(:class, [ name, superclass, body ],
+  #     module_definition_map(class_t, name, lt_t, end_t))
   # end
   
-  def condition_mod(if_true, if_false, cond_t, cond)
-    RBX::AST::If.new line(cond_t), check_condition(cond), if_true, if_false
+  # def def_sclass(class_t, lshft_t, expr, body, end_t)
+  #   n(:sclass, [ expr, body ],
+  #     module_definition_map(class_t, nil, lshft_t, end_t))
+  # end
+  
+  def def_module(module_t, name, body, end_t)
+    line = line(module_t)
+    body = RBX::AST::Block.new line, [body]
+    name = name.name if name.is_a? RBX::AST::ConstantAccess
+    
+    RBX::AST::Module.new line, name, body
   end
   
-  # def ternary(cond, question_t, if_true, colon_t, if_false)
-  #   n(:if, [ check_condition(cond), if_true, if_false ],
-  #     ternary_map(cond, question_t, if_true, colon_t, if_false))
+  
+  #
+  # Method (un)definition
+  #
+
+  def def_method(def_t, name_t, args, body, end_t)
+    line = line(def_t)
+    name = value(name_t).to_sym
+    body = RBX::AST::Block.new line, [args, body]
+    
+    RBX::AST::Define.new line, name, body
+    # binding.pry
+    # n(:def, [ value(name_t).to_sym, args, body ],
+    #   definition_map(def_t, nil, name_t, end_t))
+  end
+
+  # def def_singleton(def_t, definee, dot_t,
+  #                   name_t, args,
+  #                   body, end_t)
+  #   case definee.type
+  #   when :int, :str, :dstr, :sym, :dsym,
+  #        :regexp, :array, :hash
+
+  #     diagnostic :error, :singleton_literal, nil, definee.loc.expression
+
+  #   else
+  #     n(:defs, [ definee, value(name_t).to_sym, args, body ],
+  #       definition_map(def_t, dot_t, name_t, end_t))
+  #   end
+  # end
+
+  # def undef_method(undef_t, names)
+  #   n(:undef, [ *names ],
+  #     keyword_map(undef_t, nil, names, nil))
+  # end
+
+  # def alias(alias_t, to, from)
+  #   n(:alias, [ to, from ],
+  #     keyword_map(alias_t, nil, [to, from], nil))
+  # end
+
+  #
+  # Formal arguments
+  #
+
+  def args(begin_t, args, end_t, check_args=true)
+    line = begin_t ? line(begin_t) : 0
+    # RBX::AST::FormalArguments19.new line, required, optional, splat, post, block
+    RBX::AST::FormalArguments19.new line, args, nil, nil, nil, nil
+  end
+
+  # def arg(name_t)
+  #   n(:arg, [ value(name_t).to_sym ],
+  #     variable_map(name_t))
+  # end
+
+  # def optarg(name_t, eql_t, value)
+  #   n(:optarg, [ value(name_t).to_sym, value ],
+  #     variable_map(name_t).
+  #       with_operator(loc(eql_t)).
+  #       with_expression(loc(name_t).join(value.loc.expression)))
+  # end
+
+  # def restarg(star_t, name_t=nil)
+  #   if name_t
+  #     n(:restarg, [ value(name_t).to_sym ],
+  #       arg_prefix_map(star_t, name_t))
+  #   else
+  #     n0(:restarg,
+  #       arg_prefix_map(star_t))
+  #   end
+  # end
+
+  # def kwarg(name_t)
+  #   n(:kwarg, [ value(name_t).to_sym ],
+  #     kwarg_map(name_t))
+  # end
+
+  # def kwoptarg(name_t, value)
+  #   n(:kwoptarg, [ value(name_t).to_sym, value ],
+  #     kwarg_map(name_t, value))
+  # end
+
+  # def kwrestarg(dstar_t, name_t=nil)
+  #   if name_t
+  #     n(:kwrestarg, [ value(name_t).to_sym ],
+  #       arg_prefix_map(dstar_t, name_t))
+  #   else
+  #     n0(:kwrestarg,
+  #       arg_prefix_map(dstar_t))
+  #   end
+  # end
+
+  # def shadowarg(name_t)
+  #   n(:shadowarg, [ value(name_t).to_sym ],
+  #     variable_map(name_t))
+  # end
+
+  # def blockarg(amper_t, name_t)
+  #   n(:blockarg, [ value(name_t).to_sym ],
+  #     arg_prefix_map(amper_t, name_t))
   # end
 
   #
@@ -626,7 +716,157 @@ class RubiniusBuilder < Parser::Builders::Default
   # end
 
   
+  #
+  # Control flow
+  #
   
+  # Logical operations: and, or
+  
+  def logical_op(type, lhs, op_t, rhs)
+    line = line(op_t)
+    
+    case type
+    when :and
+      RBX::AST::And.new line, lhs, rhs
+    when :or
+      RBX::AST::Or.new line, lhs, rhs
+    else
+      raise 'booooom'
+    end
+  end
+  
+  # Conditionals
+
+  # def condition(cond_t, cond, then_t,
+  #               if_true, else_t, if_false, end_t)
+  #   n(:if, [ check_condition(cond), if_true, if_false ],
+  #     condition_map(cond_t, cond, then_t, if_true, else_t, if_false, end_t))
+  # end
+  
+  def condition_mod(if_true, if_false, cond_t, cond)
+    RBX::AST::If.new line(cond_t), check_condition(cond), if_true, if_false
+  end
+  
+  # def ternary(cond, question_t, if_true, colon_t, if_false)
+  #   n(:if, [ check_condition(cond), if_true, if_false ],
+  #     ternary_map(cond, question_t, if_true, colon_t, if_false))
+  # end
+
+  # # Case matching
+
+  # def when(when_t, patterns, then_t, body)
+  #   children = patterns << body
+  #   n(:when, children,
+  #     keyword_map(when_t, then_t, children, nil))
+  # end
+
+  # def case(case_t, expr, when_bodies, else_t, else_body, end_t)
+  #   n(:case, [ expr, *(when_bodies << else_body)],
+  #     condition_map(case_t, expr, nil, nil, else_t, else_body, end_t))
+  # end
+
+  # # Loops
+
+  # def loop(type, keyword_t, cond, do_t, body, end_t)
+  #   n(type, [ check_condition(cond), body ],
+  #     keyword_map(keyword_t, do_t, nil, end_t))
+  # end
+
+  # def loop_mod(type, body, keyword_t, cond)
+  #   if body.type == :kwbegin
+  #     type = :"#{type}_post"
+  #   end
+
+  #   n(type, [ check_condition(cond), body ],
+  #     keyword_mod_map(body, keyword_t, cond))
+  # end
+
+  # def for(for_t, iterator, in_t, iteratee,
+  #         do_t, body, end_t)
+  #   n(:for, [ iterator, iteratee, body ],
+  #     for_map(for_t, in_t, do_t, end_t))
+  # end
+
+  # # Keywords
+
+  # def keyword_cmd(type, keyword_t, lparen_t=nil, args=[], rparen_t=nil)
+  #   if type == :yield && args.count > 0
+  #     last_arg = args.last
+  #     if last_arg.type == :block_pass
+  #       diagnostic :error, :block_given_to_yield, nil, loc(keyword_t), [last_arg.loc.expression]
+  #     end
+  #   end
+
+  #   n(type, args,
+  #     keyword_map(keyword_t, lparen_t, args, rparen_t))
+  # end
+
+  # # BEGIN, END
+
+  # def preexe(preexe_t, lbrace_t, compstmt, rbrace_t)
+  #   n(:preexe, [ compstmt ],
+  #     keyword_map(preexe_t, lbrace_t, [], rbrace_t))
+  # end
+
+  # def postexe(postexe_t, lbrace_t, compstmt, rbrace_t)
+  #   n(:postexe, [ compstmt ],
+  #     keyword_map(postexe_t, lbrace_t, [], rbrace_t))
+  # end
+
+  # # Exception handling
+
+  # def rescue_body(rescue_t,
+  #                 exc_list, assoc_t, exc_var,
+  #                 then_t, compound_stmt)
+  #   n(:resbody, [ exc_list, exc_var, compound_stmt ],
+  #     rescue_body_map(rescue_t, exc_list, assoc_t,
+  #                     exc_var, then_t, compound_stmt))
+  # end
+
+  # def begin_body(compound_stmt, rescue_bodies=[],
+  #                else_t=nil,    else_=nil,
+  #                ensure_t=nil,  ensure_=nil)
+  #   if rescue_bodies.any?
+  #     if else_t
+  #       compound_stmt =
+  #         n(:rescue,
+  #           [ compound_stmt, *(rescue_bodies + [ else_ ]) ],
+  #           eh_keyword_map(compound_stmt, nil, rescue_bodies, else_t, else_))
+  #     else
+  #       compound_stmt =
+  #         n(:rescue,
+  #           [ compound_stmt, *(rescue_bodies + [ nil ]) ],
+  #           eh_keyword_map(compound_stmt, nil, rescue_bodies, nil, nil))
+  #     end
+  #   end
+
+  #   if ensure_t
+  #     compound_stmt =
+  #       n(:ensure,
+  #         [ compound_stmt, ensure_ ],
+  #         eh_keyword_map(compound_stmt, ensure_t, [ ensure_ ], nil, nil))
+  #   end
+
+  #   compound_stmt
+  # end
+
+  
+  
+  #
+  # Expression grouping
+  #
+
+  def compstmt(statements)
+    case
+    when statements.none?
+      RBX::AST::NilLiteral.new 0
+    when statements.one?
+      statements.first
+    else
+      n(:begin, statements,
+        collection_map(nil, statements, nil))
+    end
+  end
   
   def begin(begin_t, body, end_t)
     if body.nil?
@@ -647,6 +887,22 @@ class RubiniusBuilder < Parser::Builders::Default
       body
     end
   end
+  
+  # def begin_keyword(begin_t, body, end_t)
+  #   if body.nil?
+  #     # A nil expression: `begin end'.
+  #     n0(:kwbegin,
+  #       collection_map(begin_t, nil, end_t))
+  #   elsif (body.type == :begin &&
+  #          body.loc.begin.nil? && body.loc.end.nil?)
+  #     # Synthesized (begin) from compstmt "a; b".
+  #     n(:kwbegin, body.children,
+  #       collection_map(begin_t, body.children, end_t))
+  #   else
+  #     n(:kwbegin, [ body ],
+  #       collection_map(begin_t, [ body ], end_t))
+  #   end
+  # end
   
 private
   
@@ -710,9 +966,12 @@ private
 end
 
 
-# class RBX::AST::SendWithArguments
-#   def self.new *args
-#     p args
+# class RBX::AST::Module
+#   class << self
+#     def new *args
+#       p args
+#       deco_super
+#     end
 #   end
 # end
 
@@ -730,6 +989,14 @@ class String
   end
 end
 
-    # p "$x".to_sexp
-    # p [:gvar, :$x]
-    # 
+
+    # p <<-ruby.to_sexp
+    #   module X
+    #     def y
+    #     end
+    #   end
+    # ruby
+
+    # p [:module,
+    # :X,
+    # [:scope, [:block, [:defn, :y, [:args], [:scope, [:block, [:nil]]]]]]]
