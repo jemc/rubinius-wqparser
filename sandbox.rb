@@ -301,7 +301,9 @@ class RubiniusBuilder < Parser::Builders::Default
   # end
 
   def ident(token)
-    RBX::AST::LocalVariableAccess.new line(token), value(token).to_sym
+    # RBX::AST::LocalVariableAccess.new line(token), value(token).to_sym
+    receiver = RBX::AST::Self.new line(token)
+    RBX::AST::Send.new line(token), nil, value(token).to_sym, true
   end
 
   # def ivar(token)
@@ -407,18 +409,36 @@ class RubiniusBuilder < Parser::Builders::Default
     #   diagnostic :error, :backref_assignment, nil, lhs.loc.expression
     # end
   end
-
+  
   # def multi_lhs(begin_t, items, end_t)
   #   n(:mlhs, [ *items ],
   #     collection_map(begin_t, items, end_t))
   # end
-
+  
   # def multi_assign(lhs, eql_t, rhs)
   #   n(:masgn, [ lhs, rhs ],
   #     binary_op_map(lhs, eql_t, rhs))
   # end
-
-
+  
+  #
+  # Control flow
+  #
+  
+  # Logical operations: and, or
+  
+  def logical_op(type, lhs, op_t, rhs)
+    line = line(op_t)
+    
+    case type
+    when :and
+      RBX::AST::And.new line, lhs, rhs
+    when :or
+      RBX::AST::Or.new line, lhs, rhs
+    else
+      raise 'booooom'
+    end
+  end
+  
   
   
   
@@ -485,8 +505,6 @@ class String
   end
 end
 
-#     p ':"x#{(1 + 1)}y"'.to_sexp
-# p    [:dsym,
-#      "x",
-#      [:evstr, [:call, [:lit, 1], :+, [:arglist, [:lit, 1]]]],
-#      [:str, "y"]]
+    # p "() and a".to_sexp
+    # p [:and, [:nil], [:call, nil, :a, [:arglist]]]
+    
