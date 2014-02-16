@@ -2,20 +2,20 @@
 # require "bundler/gem_tasks"
 require "redcard"
 
-if RedCard.check :rubinius
-  namespace :spec do
-    desc "Load the parser into the Spec ToolSet"
-    task :toolset do
-      Rubinius::ToolSet.start
-      require_relative "sandbox.rb"
-      Rubinius::ToolSet.finish :spec
-    end
-  end
+# if RedCard.check :rubinius
+#   namespace :spec do
+#     desc "Load the parser into the Spec ToolSet"
+#     task :toolset do
+#       Rubinius::ToolSet.start
+#       require_relative "sandbox.rb"
+#       Rubinius::ToolSet.finish :spec
+#     end
+#   end
 
-  dependencies = %w[spec:toolset]
-else
+#   dependencies = %w[spec:toolset]
+# else
   dependencies = []
-end
+# end
 
 desc "Run the specs"
 task :spec => dependencies do

@@ -72,31 +72,13 @@ class RubiniusBuilder < Parser::Builders::Default
   end
   
   def string_compose(begin_t, parts, end_t)
-    line = parts.first.line
+    dynamic, line, string, parts = compose_parts(parts)
     
-    # if parts.one?
-    #   parts.first
-    # else
-      if parts.detect { |part| !part.is_a? RBX::AST::StringLiteral }
-        first = parts.shift.string if parts.first.is_a? RBX::AST::StringLiteral
-        first ||= ''
-        
-        parts.map! do |part|
-          if part.is_a? RBX::AST::StringLiteral
-            part
-          else
-            RBX::AST::ToString.new line, part
-          end
-        end
-        
-        RBX::AST::DynamicString.new line, first, [*parts]
-      elsif parts.one?
-        parts.first
-      else
-        value = parts.map(&:string).join
-        RBX::AST::StringLiteral.new line, value
-      end
-    # end
+    if dynamic
+      RBX::AST::DynamicString.new line, string, parts
+    else
+      string
+    end
   end
   
   # def character(char_t)
@@ -171,33 +153,12 @@ class RubiniusBuilder < Parser::Builders::Default
   end
   
   def regexp_compose(begin_t, parts, end_t, options)
-    line = line(begin_t)
+    dynamic, line, string, parts = compose_parts(parts)
     
-    if parts.empty?
-      RBX::AST::RegexLiteral.new line, '', options
-    elsif parts.one?
-      str = parts.first
-      
-      RBX::AST::RegexLiteral.new line, str.string, options
+    if dynamic
+      RBX::AST::DynamicRegex.new line, string, parts, options
     else
-      raise 'boom'
-      # if parts.detect { |part| !part.is_a? RBX::AST::StringLiteral }
-      #   first = parts.shift.string if parts.first.is_a? RBX::AST::StringLiteral
-      #   first ||= ''
-        
-      #   parts.map! do |part|
-      #     if part.is_a? RBX::AST::StringLiteral
-      #       part
-      #     else
-      #       RBX::AST::ToString.new line, part
-      #     end
-      #   end
-        
-      #   RBX::AST::DynamicSymbol.new line, first, [*parts]
-      # else
-      #   value = parts.map(&:string).join
-      #   RBX::AST::SymbolLiteral.new line, value
-      # end
+      RBX::AST::RegexLiteral.new line, string.string, options
     end
   end
   
@@ -650,43 +611,46 @@ class RubiniusBuilder < Parser::Builders::Default
     RBX::AST::SendWithArguments.new line, receiver, name, arg
   end
 
-  # def match_op(receiver, match_t, arg)
-  #   source_map = send_binary_op_map(receiver, match_t, arg)
+  def match_op(receiver, match_t, arg)
+    line = receiver.line
+    
+    RBX::AST::Match2.new line, receiver, arg
+    # source_map = send_binary_op_map(receiver, match_t, arg)
 
-  #   if receiver.type == :regexp &&
-  #         receiver.children.count == 2 &&
-  #         receiver.children.first.type == :str
+    # if receiver.type == :regexp &&
+    #       receiver.children.count == 2 &&
+    #       receiver.children.first.type == :str
 
-  #     str_node, opt_node = *receiver
-  #     regexp_body, = *str_node
-  #     *regexp_opt  = *opt_node
+    #   str_node, opt_node = *receiver
+    #   regexp_body, = *str_node
+    #   *regexp_opt  = *opt_node
 
-  #     if defined?(Encoding)
-  #       regexp_body = case
-  #       when regexp_opt.include?(:u)
-  #         regexp_body.encode(Encoding::UTF_8)
-  #       when regexp_opt.include?(:e)
-  #         regexp_body.encode(Encoding::EUC_JP)
-  #       when regexp_opt.include?(:s)
-  #         regexp_body.encode(Encoding::WINDOWS_31J)
-  #       when regexp_opt.include?(:n)
-  #         regexp_body.encode(Encoding::BINARY)
-  #       else
-  #         regexp_body
-  #       end
-  #     end
+    #   if defined?(Encoding)
+    #     regexp_body = case
+    #     when regexp_opt.include?(:u)
+    #       regexp_body.encode(Encoding::UTF_8)
+    #     when regexp_opt.include?(:e)
+    #       regexp_body.encode(Encoding::EUC_JP)
+    #     when regexp_opt.include?(:s)
+    #       regexp_body.encode(Encoding::WINDOWS_31J)
+    #     when regexp_opt.include?(:n)
+    #       regexp_body.encode(Encoding::BINARY)
+    #     else
+    #       regexp_body
+    #     end
+    #   end
 
-  #     Regexp.new(regexp_body).names.each do |name|
-  #       @parser.static_env.declare(name)
-  #     end
+    #   Regexp.new(regexp_body).names.each do |name|
+    #     @parser.static_env.declare(name)
+    #   end
 
-  #     n(:match_with_lvasgn, [ receiver, arg ],
-  #       source_map)
-  #   else
-  #     n(:send, [ receiver, :=~, arg ],
-  #       source_map)
-  #   end
-  # end
+    #   n(:match_with_lvasgn, [ receiver, arg ],
+    #     source_map)
+    # else
+    #   n(:send, [ receiver, :=~, arg ],
+    #     source_map)
+    # end
+  end
 
   # def unary_op(op_t, receiver)
   #   case value(op_t)
@@ -908,6 +872,30 @@ class RubiniusBuilder < Parser::Builders::Default
   
 private
   
+  def compose_parts(parts)
+    line = parts.first ? parts.first.line : 0
+    
+    if parts.detect { |part| !part.is_a? RBX::AST::StringLiteral }
+      first = parts.shift.string if parts.first.is_a? RBX::AST::StringLiteral
+      first ||= ''
+      
+      parts.map! do |part|
+        if part.is_a? RBX::AST::StringLiteral
+          part
+        else
+          RBX::AST::ToString.new line, part
+        end
+      end
+      
+      return [true, line, first, [*parts]]
+    elsif parts.one?
+      return [false, line, parts.first, []]
+    else
+      string = RBX::AST::StringLiteral.new line, parts.map(&:string).join
+      return [false, line, string, []]
+    end
+  end
+  
   def check_condition(cond)
     case cond
     # when :masgn
@@ -995,8 +983,8 @@ end
 class << Object.new
   class << self
     def parse str, &block
-      p str.to_sexp
-      p block.call
+      puts "expect: #{block.call.inspect}"
+      puts "actual: #{str.to_sexp.inspect}"
     end
   end
   
