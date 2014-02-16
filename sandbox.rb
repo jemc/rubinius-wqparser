@@ -398,6 +398,8 @@ class RubiniusBuilder < Parser::Builders::Default
       RBX::AST::LocalVariableAssignment.new line, name, rhs
     when RBX::AST::InstanceVariableAccess
       RBX::AST::InstanceVariableAssignment.new line, name, rhs
+    when RBX::AST::GlobalVariableAccess
+      RBX::AST::GlobalVariableAssignment.new line, name, rhs
     else
       # binding.pry
       raise 'bomb!'
