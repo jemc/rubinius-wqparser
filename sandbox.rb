@@ -116,17 +116,30 @@ class RubiniusBuilder < Parser::Builders::Default
   end
   
   def symbol_compose(begin_t, parts, end_t)
+    line = parts.first.line
+    
     if parts.one?
       str = parts.first
       
-      RBX::AST::SymbolLiteral.new str.line, str.string.to_sym
-    elsif @parser.version == 18 && parts.empty?
-      raise "boom!"
-      diagnostic :error, :empty_symbol, nil, loc(begin_t).join(loc(end_t))
+      RBX::AST::SymbolLiteral.new line, str.string.to_sym
     else
-      raise "wooomba!"
-      n(:dsym, [ *parts ],
-        collection_map(begin_t, parts, end_t))
+      if parts.detect { |part| !part.is_a? RBX::AST::StringLiteral }
+        first = parts.shift.string if parts.first.is_a? RBX::AST::StringLiteral
+        first ||= ''
+        
+        parts.map! do |part|
+          if part.is_a? RBX::AST::StringLiteral
+            part
+          else
+            RBX::AST::ToString.new line, part
+          end
+        end
+        
+        RBX::AST::DynamicSymbol.new line, first, [*parts]
+      else
+        value = parts.map(&:string).join
+        RBX::AST::SymbolLiteral.new line, value
+      end
     end
   end
   
@@ -472,21 +485,8 @@ class String
   end
 end
 
-#     p <<-ruby.to_sexp
-# a += <<-H1 + b + <<-H2
-#   first
-# H1
-#   second
-# H2
-#     ruby
-
-# p   [:lasgn,
-#      :a,
-#      [:call,
-#       [:lvar, :a],
-#       :+,
-#       [:arglist,
-#        [:call,
-#         [:call, [:str, "  first\n"], :+, [:arglist, [:call, nil, :b, [:arglist]]]],
-#         :+,
-#         [:arglist, [:str, "  second\n"]]]]]]
+#     p ':"x#{(1 + 1)}y"'.to_sexp
+# p    [:dsym,
+#      "x",
+#      [:evstr, [:call, [:lit, 1], :+, [:arglist, [:lit, 1]]]],
+#      [:str, "y"]]
