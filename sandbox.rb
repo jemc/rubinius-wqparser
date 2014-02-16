@@ -509,13 +509,7 @@ class RubiniusBuilder < Parser::Builders::Default
   # end
   
   def condition_mod(if_true, if_false, cond_t, cond)
-    line = line(cond_t)
-    
-    p [if_true, if_false, cond_t, cond]
-    AST::If.new line, cond, body, else_body
-    
-    n(:if, [ check_condition(cond), if_true, if_false ],
-      keyword_mod_map(if_true || if_false, cond_t, cond))
+    RBX::AST::If.new line(cond_t), check_condition(cond), if_true, if_false
   end
   
   # def ternary(cond, question_t, if_true, colon_t, if_false)
@@ -548,6 +542,45 @@ class RubiniusBuilder < Parser::Builders::Default
   
 private
   
+  def check_condition(cond)
+    case cond
+    # when :masgn
+    #   diagnostic :error, :masgn_as_condition, nil, cond.loc.expression
+
+    # when :begin
+    #   if cond.children.count == 1
+    #     cond.updated(nil, [
+    #       check_condition(cond.children.last)
+    #     ])
+    #   else
+    #     cond
+    #   end
+
+    # when :and, :or, :irange, :erange
+    #   lhs, rhs = *cond
+
+    #   type = case cond.type
+    #   when :irange then :iflipflop
+    #   when :erange then :eflipflop
+    #   end
+
+    #   if [:and, :or].include?(cond.type) &&
+    #          @parser.version == 18
+    #     cond
+    #   else
+    #     cond.updated(type, [
+    #       check_condition(lhs),
+    #       check_condition(rhs)
+    #     ])
+    #   end
+
+    when RBX::AST::RegexLiteral
+      RBX::AST::Match.new cond.line, cond.source, cond.options
+    else
+      cond
+    end
+  end
+
   def line(token)
     loc(token).line
   end
@@ -591,10 +624,4 @@ end
 
     # p "1 if /x/".to_sexp
     # p [:if, [:match, [:regex, "x", 0]], [:lit, 1], nil]
-    
-    # p "str.split(//i)".to_sexp
-    # p [:call,
-    #     [:call, nil, :str, [:arglist]],
-    #     :split,
-    #     [:arglist, [:regex, "", 1]]]
     
