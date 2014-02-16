@@ -400,12 +400,12 @@ class RubiniusBuilder < Parser::Builders::Default
     RBX::AST::ConstantAccess.new line(token), value(token).to_sym
   end
 
-  # def const_global(t_colon3, name_t)
-  #   cbase = n0(:cbase, token_map(t_colon3))
-
-  #   n(:const, [ cbase, value(name_t).to_sym ],
-  #     constant_map(cbase, t_colon3, name_t))
-  # end
+  def const_global(t_colon3, token)
+    line = line(token)
+    name = value(token).to_sym
+    
+    RBX::AST::ToplevelConstant.new line, name
+  end
 
   def const_fetch(outer, t_colon2, token)
     line = line(token)
@@ -639,6 +639,6 @@ class String
   end
 end
 
-    # p "X::Y".to_sexp
-    # p [:colon2, [:const, :X], :Y]
+    # p "::Y".to_sexp
+    # p [:colon3, :Y]
     
