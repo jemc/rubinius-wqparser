@@ -634,23 +634,10 @@ class RubiniusBuilder < Parser::Builders::Default
   #     send_unary_op_map(op_t, receiver))
   # end
 
-  # def not_op(not_t, begin_t=nil, receiver=nil, end_t=nil)
-  #   if @parser.version == 18
-  #     n(:not, [ receiver ],
-  #       unary_op_map(not_t, receiver))
-  #   else
-  #     if receiver.nil?
-  #       nil_node = n0(:begin, collection_map(begin_t, nil, end_t))
-
-  #       n(:send, [
-  #         nil_node, :'!'
-  #       ], send_unary_op_map(not_t, nil_node))
-  #     else
-  #       n(:send, [ receiver, :'!' ],
-  #         send_unary_op_map(not_t, receiver))
-  #     end
-  #   end
-  # end
+  def not_op(not_t, begin_t=nil, receiver=nil, end_t=nil)
+    # RBX::AST::Not.new line(not_t), receiver
+    RBX::AST::Send.new line(not_t), receiver, :'!'
+  end
 
   
   #
@@ -722,21 +709,29 @@ class RubiniusBuilder < Parser::Builders::Default
   #     for_map(for_t, in_t, do_t, end_t))
   # end
 
-  # # Keywords
+  # Keywords
 
-  # def keyword_cmd(type, keyword_t, lparen_t=nil, args=[], rparen_t=nil)
-  #   if type == :yield && args.count > 0
-  #     last_arg = args.last
-  #     if last_arg.type == :block_pass
-  #       diagnostic :error, :block_given_to_yield, nil, loc(keyword_t), [last_arg.loc.expression]
-  #     end
-  #   end
+  def keyword_cmd(type, keyword_t, lparen_t=nil, args=[], rparen_t=nil)
+    if type == :yield && args.count > 0
+      raise 'boom boom'
+      # last_arg = args.last
+      # if last_arg.type == :block_pass
+      #   diagnostic :error, :block_given_to_yield, nil, loc(keyword_t), [last_arg.loc.expression]
+      # end
+    end
+    
+    line = line(keyword_t)
+    
+    case type
+    when :return
+      value = args.first or RBX::AST::NilLiteral.new line
+      RBX::AST::Return.new line, value
+    else
+      raise 'boom boom boom'
+    end
+  end
 
-  #   n(type, args,
-  #     keyword_map(keyword_t, lparen_t, args, rparen_t))
-  # end
-
-  # # BEGIN, END
+  # BEGIN, END
 
   # def preexe(preexe_t, lbrace_t, compstmt, rbrace_t)
   #   n(:preexe, [ compstmt ],
