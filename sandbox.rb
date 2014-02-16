@@ -309,20 +309,17 @@ class RubiniusBuilder < Parser::Builders::Default
     RBX::AST::Send.new line(token), nil, value(token).to_sym, true
   end
 
-  # def ivar(token)
-  #   n(:ivar, [ value(token).to_sym ],
-  #     variable_map(token))
-  # end
+  def ivar(token)
+    RBX::AST::InstanceVariableAccess.for_name line(token), value(token).to_sym
+  end
 
-  # def gvar(token)
-  #   n(:gvar, [ value(token).to_sym ],
-  #     variable_map(token))
-  # end
+  def gvar(token)
+    RBX::AST::GlobalVariableAccess.for_name line(token), value(token).to_sym
+  end
 
-  # def cvar(token)
-  #   n(:cvar, [ value(token).to_sym ],
-  #     variable_map(token))
-  # end
+  def cvar(token)
+    RBX::AST::ClassVariableAccess.for_name line(token), value(token).to_sym
+  end
 
   # def back_ref(token)
   #   n(:back_ref, [ value(token).to_sym ],
@@ -733,6 +730,6 @@ class String
   end
 end
 
-    # p "(a...b)".to_sexp
-    # p [:dot3, [:call, nil, :a, [:arglist]], [:call, nil, :b, [:arglist]]]
-    
+    # p "$x".to_sexp
+    # p [:gvar, :$x]
+    # 
