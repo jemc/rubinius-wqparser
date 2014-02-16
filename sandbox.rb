@@ -143,10 +143,67 @@ class RubiniusBuilder < Parser::Builders::Default
     end
   end
   
+  # Executable strings
+  
+  # def xstring_compose(begin_t, parts, end_t)
+  #   n(:xstr, [ *parts ],
+  #     string_map(begin_t, parts, end_t))
+  # end
+  
+  # Regular expressions
+  
+  def regexp_options(regopt_t)
+    opt_convert = {
+      'i' => 1, # RE_OPTION_IGNORECASE
+      'm' => 2, # RE_OPTION_EXTENDED
+      'x' => 4, # RE_OPTION_MULTILINE
+      'n' => (1 << 9), # RE_KCODE_NONE
+      'e' => (2 << 9), # RE_KCODE_EUC
+      's' => (3 << 9), # RE_KCODE_SJIS
+      'u' => (4 << 9), # RE_KCODE_UTF8
+      'o' => 0, # RE_OPTION_ONCE (8192, but ignored for literal Regexp)
+    }
+    
+    value(regopt_t).each_char.map { |chr| opt_convert[chr] }.inject(&:+) or 0
+  end
+  
+  def regexp_compose(begin_t, parts, end_t, options)
+    line = line(begin_t)
+    
+    if parts.empty?
+      RBX::AST::RegexLiteral.new line, '', options
+    elsif parts.one?
+      str = parts.first
+      
+      RBX::AST::RegexLiteral.new line, str.string, options
+    else
+      raise 'boom'
+      # if parts.detect { |part| !part.is_a? RBX::AST::StringLiteral }
+      #   first = parts.shift.string if parts.first.is_a? RBX::AST::StringLiteral
+      #   first ||= ''
+        
+      #   parts.map! do |part|
+      #     if part.is_a? RBX::AST::StringLiteral
+      #       part
+      #     else
+      #       RBX::AST::ToString.new line, part
+      #     end
+      #   end
+        
+      #   RBX::AST::DynamicSymbol.new line, first, [*parts]
+      # else
+      #   value = parts.map(&:string).join
+      #   RBX::AST::SymbolLiteral.new line, value
+      # end
+    end
+  end
+  
+  
+  
   #
   # Method calls
   #
-
+  
   def call_method(receiver, dot_t, selector_t,
                   lparen_t=nil, args=[], rparen_t=nil)
     line = receiver.line
@@ -155,7 +212,11 @@ class RubiniusBuilder < Parser::Builders::Default
     if args.empty?
       RBX::AST::Send.new line, receiver, name
     else
+      args = RBX::AST::ArrayLiteral.new line, args
       RBX::AST::SendWithArguments.new line, receiver, name, args
+      # require 'pry'
+      # binding.pry
+      # x
     end
   end
 
@@ -439,6 +500,28 @@ class RubiniusBuilder < Parser::Builders::Default
     end
   end
   
+  # Conditionals
+
+  # def condition(cond_t, cond, then_t,
+  #               if_true, else_t, if_false, end_t)
+  #   n(:if, [ check_condition(cond), if_true, if_false ],
+  #     condition_map(cond_t, cond, then_t, if_true, else_t, if_false, end_t))
+  # end
+  
+  def condition_mod(if_true, if_false, cond_t, cond)
+    line = line(cond_t)
+    
+    p [if_true, if_false, cond_t, cond]
+    AST::If.new line, cond, body, else_body
+    
+    n(:if, [ check_condition(cond), if_true, if_false ],
+      keyword_mod_map(if_true || if_false, cond_t, cond))
+  end
+  
+  # def ternary(cond, question_t, if_true, colon_t, if_false)
+  #   n(:if, [ check_condition(cond), if_true, if_false ],
+  #     ternary_map(cond, question_t, if_true, colon_t, if_false))
+  # end
   
   
   
@@ -472,6 +555,7 @@ private
   instance_methods.each do |sym|
     deco sym do |*args, &block|
       begin
+        # p sym
         deco_super *args, &block
       rescue Exception=>e
         p sym
@@ -485,9 +569,9 @@ private
 end
 
 
-# class RBX::AST::Send
-#   def to_sexp
-#     p self
+# class RBX::AST::SendWithArguments
+#   def self.new *args
+#     p args
 #   end
 # end
 
@@ -505,6 +589,12 @@ class String
   end
 end
 
-    # p "() and a".to_sexp
-    # p [:and, [:nil], [:call, nil, :a, [:arglist]]]
+    # p "1 if /x/".to_sexp
+    # p [:if, [:match, [:regex, "x", 0]], [:lit, 1], nil]
+    
+    # p "str.split(//i)".to_sexp
+    # p [:call,
+    #     [:call, nil, :str, [:arglist]],
+    #     :split,
+    #     [:arglist, [:regex, "", 1]]]
     
