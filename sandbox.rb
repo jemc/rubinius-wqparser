@@ -74,9 +74,9 @@ class RubiniusBuilder < Parser::Builders::Default
   def string_compose(begin_t, parts, end_t)
     line = parts.first.line
     
-    if parts.one?
-      parts.first
-    else
+    # if parts.one?
+    #   parts.first
+    # else
       if parts.detect { |part| !part.is_a? RBX::AST::StringLiteral }
         first = parts.shift.string if parts.first.is_a? RBX::AST::StringLiteral
         first ||= ''
@@ -90,11 +90,13 @@ class RubiniusBuilder < Parser::Builders::Default
         end
         
         RBX::AST::DynamicString.new line, first, [*parts]
+      elsif parts.one?
+        parts.first
       else
         value = parts.map(&:string).join
         RBX::AST::StringLiteral.new line, value
       end
-    end
+    # end
   end
   
   # def character(char_t)
@@ -202,34 +204,33 @@ class RubiniusBuilder < Parser::Builders::Default
   
   # Arrays
 
-  # def array(begin_t, elements, end_t)
-  #   n(:array, elements,
-  #     collection_map(begin_t, elements, end_t))
-  # end
+  def array(begin_t, elements, end_t)
+    line = line(begin_t)
+    
+    if elements.detect { |x| x.is_a? RBX::AST::SplatValue}
+      if elements.one?
+        elements.first
+      else
+        rest = elements.pop.value
+        array = RBX::AST::ArrayLiteral.new line, elements
+        RBX::AST::ConcatArgs.new line, array, rest
+      end
+    else
+      RBX::AST::ArrayLiteral.new line, elements
+    end
+  end
 
-  # def splat(star_t, arg=nil)
-  #   if arg.nil?
-  #     n0(:splat,
-  #       unary_op_map(star_t))
-  #   else
-  #     n(:splat, [ arg ],
-  #       unary_op_map(star_t, arg))
-  #   end
-  # end
+  def splat(star_t, arg=nil)
+    RBX::AST::SplatValue.new line(star_t), arg
+  end
 
-  # def word(parts)
-  #   if collapse_string_parts?(parts)
-  #     parts.first
-  #   else
-  #     n(:dstr, [ *parts ],
-  #       collection_map(nil, parts, nil))
-  #   end
-  # end
+  def word(parts)
+    string_compose(nil, parts, nil)
+  end
 
-  # def words_compose(begin_t, parts, end_t)
-  #   n(:array, [ *parts ],
-  #     collection_map(begin_t, parts, end_t))
-  # end
+  def words_compose(begin_t, parts, end_t)
+    RBX::AST::ArrayLiteral.new line(begin_t), parts
+  end
 
   # def symbols_compose(begin_t, parts, end_t)
   #   parts = parts.map do |part|
@@ -250,10 +251,9 @@ class RubiniusBuilder < Parser::Builders::Default
 
   # Hashes
 
-  # def pair(key, assoc_t, value)
-  #   n(:pair, [ key, value ],
-  #     binary_op_map(key, assoc_t, value))
-  # end
+  def pair(key, assoc_t, value)
+    [key, value]
+  end
 
   # def pair_list_18(list)
   #   if list.size % 2 != 0
@@ -280,10 +280,9 @@ class RubiniusBuilder < Parser::Builders::Default
   #     unary_op_map(dstar_t, arg))
   # end
 
-  # def associate(begin_t, pairs, end_t)
-  #   n(:hash, [ *pairs ],
-  #     collection_map(begin_t, pairs, end_t))
-  # end
+  def associate(begin_t, pairs, end_t)
+    RBX::AST::HashLiteral.new line(begin_t), pairs.flatten
+  end
 
   # Ranges
 
@@ -311,15 +310,15 @@ class RubiniusBuilder < Parser::Builders::Default
   end
 
   def ivar(token)
-    RBX::AST::InstanceVariableAccess.for_name line(token), value(token).to_sym
+    RBX::AST::InstanceVariableAccess.new line(token), value(token).to_sym
   end
 
   def gvar(token)
-    RBX::AST::GlobalVariableAccess.for_name line(token), value(token).to_sym
+    RBX::AST::GlobalVariableAccess.new line(token), value(token).to_sym
   end
 
   def cvar(token)
-    RBX::AST::ClassVariableAccess.for_name line(token), value(token).to_sym
+    RBX::AST::ClassVariableAccess.new line(token), value(token).to_sym
   end
 
   # def back_ref(token)
@@ -388,20 +387,12 @@ class RubiniusBuilder < Parser::Builders::Default
   #   node.updated(:casgn)
   # end
 
-  # def assign(lhs, eql_t, rhs)
-  #   (lhs << rhs).updated(nil, nil,
-  #     :location => lhs.loc.
-  #       with_operator(loc(eql_t)).
-  #       with_expression(join_exprs(lhs, rhs)))
-  # end
+  def assign(lhs, eql_t, rhs)
+    RBX::AST::LocalVariableAssignment.new line(eql_t), lhs.name, rhs
+  end
 
   def op_assign(lhs, op_t, rhs)
-    # require 'pry'
-    # binding.pry
-    # p [lhs_t.to_sexp, op_t, rhs.to_sexp]
-    
     line = lhs.line
-    
     name = value(op_t).to_sym
     send = RBX::AST::SendWithArguments.new line, lhs, name, rhs
     
@@ -454,8 +445,8 @@ class RubiniusBuilder < Parser::Builders::Default
   
   def def_module(module_t, name, body, end_t)
     line = line(module_t)
-    body = RBX::AST::Block.new line, [body]
     name = name.name if name.is_a? RBX::AST::ConstantAccess
+    body = RBX::AST::Block.new line, [body] unless body.is_a? RBX::AST::Block
     
     RBX::AST::Module.new line, name, body
   end
@@ -468,12 +459,10 @@ class RubiniusBuilder < Parser::Builders::Default
   def def_method(def_t, name_t, args, body, end_t)
     line = line(def_t)
     name = value(name_t).to_sym
-    body = RBX::AST::Block.new line, [args, body]
+    body = RBX::AST::Block.new line, [body] unless body.is_a? RBX::AST::Block
+    body.array.unshift args
     
     RBX::AST::Define.new line, name, body
-    # binding.pry
-    # n(:def, [ value(name_t).to_sym, args, body ],
-    #   definition_map(def_t, nil, name_t, end_t))
   end
 
   # def def_singleton(def_t, definee, dot_t,
@@ -569,17 +558,16 @@ class RubiniusBuilder < Parser::Builders::Default
   
   def call_method(receiver, dot_t, selector_t,
                   lparen_t=nil, args=[], rparen_t=nil)
-    line = receiver.line
+    line = receiver ? receiver.line : line(selector_t)
     name = value(selector_t).to_sym
+    vcall = receiver.nil?
+    receiver = RBX::AST::Self.new line if vcall
     
     if args.empty?
-      RBX::AST::Send.new line, receiver, name
+      RBX::AST::Send.new line, receiver, name, vcall
     else
       args = RBX::AST::ArrayLiteral.new line, args
-      RBX::AST::SendWithArguments.new line, receiver, name, args
-      # require 'pry'
-      # binding.pry
-      # x
+      RBX::AST::SendWithArguments.new line, receiver, name, args, vcall
     end
   end
 
@@ -863,8 +851,7 @@ class RubiniusBuilder < Parser::Builders::Default
     when statements.one?
       statements.first
     else
-      n(:begin, statements,
-        collection_map(nil, statements, nil))
+      RBX::AST::Block.new statements.first.line, statements
     end
   end
   
@@ -984,19 +971,17 @@ class String
     buffer.source = self
     
     node = pr.parse buffer
-    # p node.class
+    # p node
     node.to_sexp
   end
 end
 
-
-    # p <<-ruby.to_sexp
-    #   module X
-    #     def y
-    #     end
-    #   end
-    # ruby
-
-    # p [:module,
-    # :X,
-    # [:scope, [:block, [:defn, :y, [:args], [:scope, [:block, [:nil]]]]]]]
+class << Object.new
+  class << self
+    def parse str, &block
+      p str.to_sexp
+      p block.call
+    end
+  end
+  
+end
