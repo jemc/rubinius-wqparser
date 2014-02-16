@@ -733,6 +733,6 @@ class String
   end
 end
 
-    # p "(a..b)".to_sexp
-    # p [:dot2, [:call, nil, :a, [:arglist]], [:call, nil, :b, [:arglist]]]
-    # 
+    # p "(a...b)".to_sexp
+    # p [:dot3, [:call, nil, :a, [:arglist]], [:call, nil, :b, [:arglist]]]
+    
