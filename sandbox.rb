@@ -388,7 +388,20 @@ class RubiniusBuilder < Parser::Builders::Default
   # end
 
   def assign(lhs, eql_t, rhs)
-    RBX::AST::LocalVariableAssignment.new line(eql_t), lhs.name, rhs
+    line = line(eql_t)
+    name = lhs.name
+    
+    case lhs
+    when RBX::AST::Send
+      RBX::AST::LocalVariableAssignment.new line, name, rhs
+    when RBX::AST::LocalVariableAccess
+      RBX::AST::LocalVariableAssignment.new line, name, rhs
+    when RBX::AST::InstanceVariableAccess
+      RBX::AST::InstanceVariableAssignment.new line, name, rhs
+    else
+      # binding.pry
+      raise 'bomb!'
+    end
   end
 
   def op_assign(lhs, op_t, rhs)
@@ -933,7 +946,7 @@ private
   end
 
   def line(token)
-    loc(token).line
+    token ? loc(token).line : 0
   end
   
   instance_methods.each do |sym|
@@ -946,6 +959,7 @@ private
         puts; p e
         puts; e.backtrace.each { |line| puts line }
         puts
+        raise e
       end
     end
   end
