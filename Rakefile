@@ -23,4 +23,9 @@ task :spec => dependencies do
   # sh "mspec spec/true_spec.rb"
 end
 
+task :sandbox do
+  require_relative 'sandbox.rb'
+end
+
 task :default => :spec
+# task :default => :sandbox

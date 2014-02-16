@@ -53,42 +53,45 @@ class RubiniusBuilder < Parser::Builders::Default
   end
   private :numeric
   
-  # def negate(uminus_t, numeric) end
+  def negate(token, numeric)
+    numeric.value *= -1
+    numeric
+  end
   
   # def __LINE__(__LINE__t) end
   
   # # Strings
   
-  # def string(token)
-  #   RBX::AST::StringLiteral.new line(token), value(token)
-  # end
+  def string(token)
+    RBX::AST::StringLiteral.new line(token), value(token)
+  end
   
-  # def string_internal(token)
-  #   RBX::AST::StringLiteral.new line(token), value(token)
-  # end
+  def string_internal(token)
+    string(token)
+  end
   
-  # def string_compose(begin_t, parts, end_t)
-  #   p [begin_t, parts, end_t]
-  #   parts.first
-  #   require 'pry'
-  #   binding.pry
-  #   # # AST::DynamicString.new line, str, array
-  #   if parts.one?
-  #     # RBX::AST::StringLiteral.new line, str, array
-  #     if begin_t.nil? && end_t.nil?
-  #       parts.first
-  #     else
-  #       raise 'booom!'
-  #       n(:str, parts.first.children,
-  #         string_map(begin_t, parts, end_t))
-  #     end
-  #   else
-  #     RBX::AST::DynamicString.new line, str, [*parts]
-  #     # raise 'wooomba'
-  #   #   n(:dstr, [ *parts ],
-  #   #     string_map(begin_t, parts, end_t))
-  #   end
-  # end
+  def string_compose(begin_t, parts, end_t)
+    # p [begin_t, parts, end_t]
+    # parts.first
+    # require 'pry'
+    # binding.pry
+    # # AST::DynamicString.new line, str, array
+    if parts.one?
+      # RBX::AST::StringLiteral.new line, str, array
+      if begin_t.nil? && end_t.nil?
+        parts.first
+      else
+        raise 'booom!'
+        n(:str, parts.first.children,
+          string_map(begin_t, parts, end_t))
+      end
+    else
+      raise 'wooomba'
+      # RBX::AST::DynamicString.new parts.first.line, nil, [*parts]
+    #   n(:dstr, [ *parts ],
+    #     string_map(begin_t, parts, end_t))
+    end
+  end
   
   #   # def process_dstr(line, str, array)
   #   #   AST::DynamicString.new line, str, array
@@ -99,6 +102,32 @@ class RubiniusBuilder < Parser::Builders::Default
   # # end
   
   # # def __FILE__(__FILE__t) end
+  
+  # Symbols
+  
+  def symbol(token)
+    RBX::AST::SymbolLiteral.new line(token), value(token).to_sym
+  end
+  
+  # def symbol_internal(symbol_t)
+  #   n(:sym, [ value(symbol_t).to_sym ],
+  #     unquoted_map(symbol_t))
+  # end
+  
+  def symbol_compose(begin_t, parts, end_t)
+    if parts.one?
+      str = parts.first
+      
+      RBX::AST::SymbolLiteral.new str.line, str.string.to_sym
+    elsif @parser.version == 18 && parts.empty?
+      raise "boom!"
+      diagnostic :error, :empty_symbol, nil, loc(begin_t).join(loc(end_t))
+    else
+      raise "wooomba!"
+      n(:dsym, [ *parts ],
+        collection_map(begin_t, parts, end_t))
+    end
+  end
   
   def accessible(node)
     node
@@ -134,6 +163,9 @@ class String
     buffer.source = self
     
     node = pr.parse buffer
+    # p node
     node.to_sexp
   end
 end
+
+# p "-1".to_sexp
