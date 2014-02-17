@@ -428,24 +428,23 @@ class RubiniusBuilder < Parser::Builders::Default
   def def_class(class_t, name, lt_t, superclass, body, end_t)
     line = line(class_t)
     name = name.name if name.is_a? RBX::AST::ConstantAccess
-    body = unless body.is_a?(RBX::AST::NilLiteral) || body.is_a?(RBX::AST::Block)
-      RBX::AST::Block.new line, [body]
-    end
+    body = prepare_module_body(line, body)
     
     RBX::AST::Class.new line, name, superclass, body
   end
   
-  # def def_sclass(class_t, lshft_t, expr, body, end_t)
-  #   n(:sclass, [ expr, body ],
-  #     module_definition_map(class_t, nil, lshft_t, end_t))
-  # end
+  def def_sclass(class_t, lshft_t, expr, body, end_t)
+    line = line(class_t)
+    name = name.name if name.is_a? RBX::AST::ConstantAccess
+    body = prepare_module_body(line, body)
+    
+    RBX::AST::SClass.new line, expr, body
+  end
   
   def def_module(module_t, name, body, end_t)
     line = line(module_t)
     name = name.name if name.is_a? RBX::AST::ConstantAccess
-    body = unless body.is_a?(RBX::AST::NilLiteral) || body.is_a?(RBX::AST::Block)
-      RBX::AST::Block.new line, [body]
-    end
+    body = prepare_module_body(line, body)
     
     RBX::AST::Module.new line, name, body
   end
@@ -572,8 +571,13 @@ class RubiniusBuilder < Parser::Builders::Default
   #     send_map(nil, nil, lambda_t))
   # end
 
-  # def block(method_call, begin_t, args, body, end_t)
-  #   _receiver, _selector, *call_args = *method_call
+  def block(method_call, begin_t, args, body, end_t)
+    # RBX::AST::Block.new line(begin_t), [body]
+    
+    method_call.block = RBX::AST::Iter19.new line(begin_t), args, body
+    method_call
+    
+    # _receiver, _selector, *call_args = *method_call
 
   #   if method_call.type == :yield
   #     diagnostic :error, :block_given_to_yield, nil, method_call.loc.keyword, [loc(begin_t)]
@@ -598,7 +602,7 @@ class RubiniusBuilder < Parser::Builders::Default
   #     n(method_call.type, [ block ],
   #       method_call.loc.with_expression(join_exprs(method_call, block)))
   #   end
-  # end
+  end
 
   def block_pass(amper_t, arg)
     RBX::AST::BlockPass.new line(amper_t), arg
@@ -911,6 +915,16 @@ private
     end
   end
   
+  def prepare_module_body(line, body)
+    if body.is_a?(RBX::AST::NilLiteral)
+      nil
+    elsif body.is_a?(RBX::AST::Block)
+      body
+    else
+      RBX::AST::Block.new line, [body]
+    end
+  end
+  
   def check_condition(cond)
     case cond
     # when :masgn
@@ -957,7 +971,7 @@ private
   instance_methods.each do |sym|
     deco sym do |*args, &block|
       begin
-        p sym
+        # p sym
         deco_super *args, &block
       rescue Exception=>e
         p sym
@@ -985,18 +999,18 @@ end
 # end
 
 
-# class String
-#   def to_sexp
-#     pr = Parser::CurrentRuby.new RubiniusBuilder.new
+class String
+  def to_sexp
+    pr = Parser::CurrentRuby.new RubiniusBuilder.new
 
-#     buffer = Parser::Source::Buffer.new('(string)')
-#     buffer.source = self
+    buffer = Parser::Source::Buffer.new('(string)')
+    buffer.source = self
     
-#     node = pr.parse buffer
-#     # p node
-#     node.to_sexp
-#   end
-# end
+    node = pr.parse buffer
+    # p node
+    node.to_sexp
+  end
+end
 
 class << Object.new
   class << self
