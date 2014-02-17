@@ -474,13 +474,22 @@ class RubiniusBuilder < Parser::Builders::Default
 
   def args(begin_t, args, end_t, check_args=true)
     line = begin_t ? line(begin_t) : 0
-    # RBX::AST::FormalArguments19.new line, required, optional, splat, post, block
-    RBX::AST::FormalArguments19.new line, args, nil, nil, nil, nil
+    
+    required = args.select { |type, arg| type == :required }.map(&:last)
+    optional = args.select { |type, arg| type == :optional }.map(&:last)
+    splat    = args.detect { |type, arg| type == :splat    }; splat = splat.last if splat
+    post     = args.detect { |type, arg| type == :post     }; post  = post .last if post
+    block    = args.detect { |type, arg| type == :block    }; block = block.last if block
+    # binding.pry
+    RBX::AST::FormalArguments19.new line, required, nil, splat, post, block
   end
 
-  # def arg(name_t)
-  #   n(:arg, [ value(name_t).to_sym ],
-  #     variable_map(name_t))
+  def arg(token)
+    [:required, value(token).to_sym]
+  end
+
+  # def optarg(token)
+  #   [:optional, value(token).to_sym]
   # end
 
   # def optarg(name_t, eql_t, value)
@@ -490,15 +499,16 @@ class RubiniusBuilder < Parser::Builders::Default
   #       with_expression(loc(name_t).join(value.loc.expression)))
   # end
 
-  # def restarg(star_t, name_t=nil)
-  #   if name_t
-  #     n(:restarg, [ value(name_t).to_sym ],
-  #       arg_prefix_map(star_t, name_t))
-  #   else
-  #     n0(:restarg,
-  #       arg_prefix_map(star_t))
-  #   end
-  # end
+  def restarg(star_t, name_t=nil)
+    [:splat, value(name_t).to_sym]
+    # if name_t
+    #   n(:restarg, [ value(name_t).to_sym ],
+    #     arg_prefix_map(star_t, name_t))
+    # else
+    #   n0(:restarg,
+    #     arg_prefix_map(star_t))
+    # end
+  end
 
   # def kwarg(name_t)
   #   n(:kwarg, [ value(name_t).to_sym ],
@@ -525,10 +535,9 @@ class RubiniusBuilder < Parser::Builders::Default
   #     variable_map(name_t))
   # end
 
-  # def blockarg(amper_t, name_t)
-  #   n(:blockarg, [ value(name_t).to_sym ],
-  #     arg_prefix_map(amper_t, name_t))
-  # end
+  def blockarg(amper_t, name_t)
+    [:block, value(name_t).to_sym]
+  end
 
   #
   # Method calls
@@ -742,6 +751,8 @@ class RubiniusBuilder < Parser::Builders::Default
         end
       
       RBX::AST::Return.new line, value
+    when :zsuper
+      RBX::AST::ZSuper.new line
     else
       raise 'boom boom boom'
     end
@@ -924,7 +935,7 @@ private
         # p sym
         deco_super *args, &block
       rescue Exception=>e
-        p sym
+        # p sym
         puts; p e
         puts; e.backtrace.each { |line| puts line }
         puts
@@ -936,11 +947,11 @@ private
 end
 
 
-# class RBX::AST::Module
+# class RBX::AST::FormalArguments19
 #   class << self
-#     def new *args
+#     deco :new do |*args|
 #       p args
-#       deco_super
+#       deco_super *args
 #     end
 #   end
 # end

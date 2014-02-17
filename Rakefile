@@ -19,7 +19,7 @@ require "redcard"
 
 desc "Run the specs"
 task :spec => dependencies do
-  sh "mspec spec -G fails -f s"
+  `mspec spec -G fails -f s`
   # sh "mspec spec/true_spec.rb"
 end
 
