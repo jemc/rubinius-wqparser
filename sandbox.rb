@@ -59,9 +59,14 @@ class RubiniusBuilder < Parser::Builders::Default
     numeric
   end
   
-  # def __LINE__(__LINE__t) end
+  def __LINE__(token)
+    value = line(token)
+    value.is_a?(Bignum) ?
+      RBX::AST::NumberLiteral.new(line(token), value) :
+      RBX::AST::FixnumLiteral.new(line(token), value)
+  end
   
-  # # Strings
+  # Strings
   
   def string(token)
     RBX::AST::StringLiteral.new line(token), value(token)
@@ -81,10 +86,9 @@ class RubiniusBuilder < Parser::Builders::Default
     end
   end
   
-  # def character(char_t)
-  #   n(:str, [ value(char_t) ],
-  #     prefix_string_map(char_t))
-  # end
+  def character(token)
+    RBX::AST::StringLiteral.new line(token), value(token)
+  end
   
   def __FILE__(token)
     RBX::AST::File.new line(token)
@@ -853,17 +857,20 @@ private
   def compose_parts(parts)
     line = parts.first ? parts.first.line : 0
     
-    if parts.detect { |part| !part.is_a? RBX::AST::StringLiteral }
-      first = parts.shift.string if parts.first.is_a? RBX::AST::StringLiteral
-      first ||= ''
-      
+    if parts.detect { |part| part.class != RBX::AST::StringLiteral }
       parts.map! do |part|
-        if part.is_a? RBX::AST::StringLiteral
+        if part.class == RBX::AST::StringLiteral
           part
+        elsif part.class == RBX::AST::DynamicString
+          str = RBX::AST::StringLiteral.new line, part.string
+          (part.string.empty? ? [] : [str]) + part.array
         else
           RBX::AST::ToString.new line, part
         end
-      end
+      end.flatten!
+      
+      first = parts.shift.string if parts.first.class == RBX::AST::StringLiteral
+      first ||= ''
       
       return [true, line, first, [*parts]]
     elsif parts.one?
