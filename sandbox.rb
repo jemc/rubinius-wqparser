@@ -130,10 +130,15 @@ class RubiniusBuilder < Parser::Builders::Default
   
   # Executable strings
   
-  # def xstring_compose(begin_t, parts, end_t)
-  #   n(:xstr, [ *parts ],
-  #     string_map(begin_t, parts, end_t))
-  # end
+  def xstring_compose(begin_t, parts, end_t)
+    dynamic, line, string, parts = compose_parts(parts)
+    
+    if dynamic
+      RBX::AST::DynamicExecuteString.new line, string, parts
+    else
+      RBX::AST::ExecuteString.new line, string.string
+    end
+  end
   
   # Regular expressions
   
@@ -979,17 +984,4 @@ class << Object.new
     end
   end
   
-  parse "(not true)" do
-    [:call, [:true], :!, [:arglist]]
-  end
-
-  parse <<-ruby do
-      a = 1
-      b = !a
-    ruby
-
-    [:block,
-     [:lasgn, :a, [:lit, 1]],
-     [:lasgn, :b, [:call, [:lvar, :a], :!, [:arglist]]]]
-  end
 end
