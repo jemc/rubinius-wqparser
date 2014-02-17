@@ -421,10 +421,13 @@ class RubiniusBuilder < Parser::Builders::Default
   # Class and module definition
   #
   
-  # def def_class(class_t, name, lt_t, superclass, body, end_t)
-  #   n(:class, [ name, superclass, body ],
-  #     module_definition_map(class_t, name, lt_t, end_t))
-  # end
+  def def_class(class_t, name, lt_t, superclass, body, end_t)
+    line = line(class_t)
+    name = name.name if name.is_a? RBX::AST::ConstantAccess
+    body = RBX::AST::Block.new line, [body] unless body.is_a? RBX::AST::Block
+    
+    RBX::AST::Class.new line, name, superclass, body
+  end
   
   # def def_sclass(class_t, lshft_t, expr, body, end_t)
   #   n(:sclass, [ expr, body ],
