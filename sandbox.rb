@@ -259,7 +259,7 @@ class RubiniusBuilder < Parser::Builders::Default
   def ident(token)
     # RBX::AST::LocalVariableAccess.new line(token), value(token).to_sym
     receiver = RBX::AST::Self.new line(token)
-    RBX::AST::Send.new line(token), nil, value(token).to_sym, true
+    RBX::AST::Send.new line(token), receiver, value(token).to_sym, true
   end
 
   def ivar(token)
@@ -285,7 +285,7 @@ class RubiniusBuilder < Parser::Builders::Default
   # end
   
   def accessible(node)
-    if node.is_a?(RBX::AST::Send) && node.privately && node.receiver == nil \
+    if node.is_a?(RBX::AST::Send) && node.privately \
     && @parser.static_env.declared?(node.name)
       RBX::AST::LocalVariableAccess.new node.line, node.name
     else
@@ -339,7 +339,7 @@ class RubiniusBuilder < Parser::Builders::Default
 
   def assignable(node)
     
-    if node.is_a?(RBX::AST::Send) && node.privately && node.receiver == nil
+    if node.is_a?(RBX::AST::Send) && node.privately
       @parser.static_env.declare(node.name)
     elsif node.is_a?(RBX::AST::LocalVariableAccess)
       @parser.static_env.declare(node.name)
@@ -358,17 +358,23 @@ class RubiniusBuilder < Parser::Builders::Default
     line = line(eql_t)
     name = lhs.name
     
-    case lhs
-    when RBX::AST::Send
+    # binding.pry
+    
+    if    lhs.class == RBX::AST::Send
       RBX::AST::LocalVariableAssignment.new line, name, rhs
-    when RBX::AST::LocalVariableAccess
+    elsif lhs.class == RBX::AST::LocalVariableAccess
       RBX::AST::LocalVariableAssignment.new line, name, rhs
-    when RBX::AST::InstanceVariableAccess
+    elsif lhs.class == RBX::AST::InstanceVariableAccess
       RBX::AST::InstanceVariableAssignment.new line, name, rhs
-    when RBX::AST::ClassVariableAccess
+    elsif lhs.class == RBX::AST::ClassVariableAccess
       RBX::AST::ClassVariableAssignment.new line, name, rhs
-    when RBX::AST::GlobalVariableAccess
+    elsif lhs.class == RBX::AST::GlobalVariableAccess
       RBX::AST::GlobalVariableAssignment.new line, name, rhs
+    elsif lhs.class == RBX::AST::AttributeAssignment
+      # RBX::AST::AttributeAssignment.new lhs.line, lhs.receiver, lhs.name, rhs
+      lhs.arguments = RBX::AST::ActualArguments.new line, rhs
+      # binding.pry
+      lhs
     else
       # binding.pry
       raise 'bomb!'
@@ -509,14 +515,8 @@ class RubiniusBuilder < Parser::Builders::Default
   # end
 
   def restarg(star_t, name_t=nil)
-    [:splat, value(name_t).to_sym]
-    # if name_t
-    #   n(:restarg, [ value(name_t).to_sym ],
-    #     arg_prefix_map(star_t, name_t))
-    # else
-    #   n0(:restarg,
-    #     arg_prefix_map(star_t))
-    # end
+    value = name_t ? value(name_t).to_sym : :*
+    [:splat, value]
   end
 
   # def kwarg(name_t)
@@ -604,13 +604,21 @@ class RubiniusBuilder < Parser::Builders::Default
     RBX::AST::BlockPass.new line(amper_t), arg
   end
 
-  # def attr_asgn(receiver, dot_t, selector_t)
-  #   method_name = (value(selector_t) + '=').to_sym
-
-  #   # Incomplete method call.
-  #   n(:send, [ receiver, method_name ],
-  #     send_map(receiver, dot_t, selector_t))
-  # end
+  def attr_asgn(receiver, dot_t, selector_t)
+    line = line(dot_t)
+    name = value(selector_t).to_sym
+    arguments = []
+    
+    if name == :[]
+      RBX::AST::ElementAssignment.new line, receiver, arguments
+    else
+      RBX::AST::AttributeAssignment.new line, receiver, name, arguments
+    end
+    
+    # # Incomplete method call.
+    # n(:send, [ receiver, method_name ],
+    #   send_map(receiver, dot_t, selector_t))
+  end
 
   # def index(receiver, lbrack_t, indexes, rbrack_t)
   #   n(:send, [ receiver, :[], *indexes ],
@@ -964,13 +972,16 @@ private
 end
 
 
-# class RBX::AST::Super
-#   class << self
-#     deco :new do |*args|
-#       p args
+# class RBX::AST::AttributeAssignment
+#   # class << self
+#     # deco :to_sexp do |*args|
+#     def to_sexp
+#       p self
+#       # p args
+#       # p @arguments
 #       deco_super *args
 #     end
-#   end
+#   # end
 # end
 
 
