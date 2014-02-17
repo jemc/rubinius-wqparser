@@ -1,0 +1,1 @@
+fails:"A Return node is parsed from \n    x = 1, 2\n    return *x"

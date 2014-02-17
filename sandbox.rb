@@ -168,8 +168,10 @@ class RubiniusBuilder < Parser::Builders::Default
   def array(begin_t, elements, end_t)
     line = line(begin_t)
     
-    if elements.detect { |x| x.is_a? RBX::AST::SplatValue}
-      if elements.one?
+    if elements.detect { |x| x.is_a?(RBX::AST::SplatValue) or x.is_a?(RBX::AST::Send) or x.is_a?(RBX::AST::SendWithArguments)}
+      if elements.empty?
+        RBX::AST::NilLiteral.new line
+      elsif elements.one?
         elements.first
       else
         rest = elements.pop.value
@@ -711,7 +713,7 @@ class RubiniusBuilder < Parser::Builders::Default
 
   # Keywords
 
-  def keyword_cmd(type, keyword_t, lparen_t=nil, args=[], rparen_t=nil)
+  def keyword_cmd(type, keyword_t, lparen_t=nil, elements=[], rparen_t=nil)
     if type == :yield && args.count > 0
       raise 'boom boom'
       # last_arg = args.last
@@ -724,7 +726,21 @@ class RubiniusBuilder < Parser::Builders::Default
     
     case type
     when :return
-      value = args.first or RBX::AST::NilLiteral.new line
+      value = \
+        if elements.empty?
+          nil
+        elsif elements.one?
+          elements.first
+        else
+          if elements.detect { |x| x.is_a?(RBX::AST::SplatValue) or x.is_a?(RBX::AST::Send) or x.is_a?(RBX::AST::SendWithArguments)}
+            rest = elements.pop.value
+            array = RBX::AST::ArrayLiteral.new line, elements
+            RBX::AST::ConcatArgs.new line, array, rest
+          else
+            RBX::AST::ArrayLiteral.new line, elements
+          end
+        end
+      
       RBX::AST::Return.new line, value
     else
       raise 'boom boom boom'
