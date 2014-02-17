@@ -1,0 +1,1 @@
+fails:"A Super node is parsed from \n    def x(&block)\n      super(&block)\n    end"

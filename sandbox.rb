@@ -591,10 +591,9 @@ class RubiniusBuilder < Parser::Builders::Default
   #   end
   # end
 
-  # def block_pass(amper_t, arg)
-  #   n(:block_pass, [ arg ],
-  #     unary_op_map(amper_t, arg))
-  # end
+  def block_pass(amper_t, arg)
+    RBX::AST::BlockPass.new line(amper_t), arg
+  end
 
   # def attr_asgn(receiver, dot_t, selector_t)
   #   method_name = (value(selector_t) + '=').to_sym
@@ -732,29 +731,31 @@ class RubiniusBuilder < Parser::Builders::Default
     end
     
     line = line(keyword_t)
+    value = \
+      if elements.empty?
+        nil
+      elsif elements.one? && !elements.first.is_a?(RBX::AST::ArrayLiteral)
+        elements.first
+      else
+        x = elements.last
+        if x.is_a?(RBX::AST::SplatValue) or x.is_a?(RBX::AST::Send) or x.is_a?(RBX::AST::SendWithArguments)
+          rest = elements.pop.value
+          array = RBX::AST::ArrayLiteral.new line, elements
+          RBX::AST::ConcatArgs.new line, array, rest
+        else
+          RBX::AST::ArrayLiteral.new line, elements
+        end
+      end
     
     case type
     when :return
-      value = \
-        if elements.empty?
-          nil
-        elsif elements.one?
-          elements.first
-        else
-          if elements.detect { |x| x.is_a?(RBX::AST::SplatValue) or x.is_a?(RBX::AST::Send) or x.is_a?(RBX::AST::SendWithArguments)}
-            rest = elements.pop.value
-            array = RBX::AST::ArrayLiteral.new line, elements
-            RBX::AST::ConcatArgs.new line, array, rest
-          else
-            RBX::AST::ArrayLiteral.new line, elements
-          end
-        end
-      
       RBX::AST::Return.new line, value
+    when :super
+      RBX::AST::Super.new line, value
     when :zsuper
       RBX::AST::ZSuper.new line
     else
-      raise 'boom boom boom'
+      raise "boom boom boom #{type.inspect}"
     end
   end
 
@@ -935,7 +936,7 @@ private
         # p sym
         deco_super *args, &block
       rescue Exception=>e
-        # p sym
+        p sym
         puts; p e
         puts; e.backtrace.each { |line| puts line }
         puts
@@ -947,7 +948,7 @@ private
 end
 
 
-# class RBX::AST::FormalArguments19
+# class RBX::AST::Super
 #   class << self
 #     deco :new do |*args|
 #       p args
