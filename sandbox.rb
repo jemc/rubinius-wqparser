@@ -358,8 +358,6 @@ class RubiniusBuilder < Parser::Builders::Default
     line = line(eql_t)
     name = lhs.name
     
-    # binding.pry
-    
     if    lhs.class == RBX::AST::Send
       RBX::AST::LocalVariableAssignment.new line, name, rhs
     elsif lhs.class == RBX::AST::LocalVariableAccess
@@ -371,9 +369,7 @@ class RubiniusBuilder < Parser::Builders::Default
     elsif lhs.class == RBX::AST::GlobalVariableAccess
       RBX::AST::GlobalVariableAssignment.new line, name, rhs
     elsif lhs.class == RBX::AST::AttributeAssignment
-      # RBX::AST::AttributeAssignment.new lhs.line, lhs.receiver, lhs.name, rhs
       lhs.arguments = RBX::AST::ActualArguments.new line, rhs
-      # binding.pry
       lhs
     else
       # binding.pry
@@ -432,7 +428,9 @@ class RubiniusBuilder < Parser::Builders::Default
   def def_class(class_t, name, lt_t, superclass, body, end_t)
     line = line(class_t)
     name = name.name if name.is_a? RBX::AST::ConstantAccess
-    body = RBX::AST::Block.new line, [body] unless body.is_a? RBX::AST::Block
+    body = unless body.is_a?(RBX::AST::NilLiteral) || body.is_a?(RBX::AST::Block)
+      RBX::AST::Block.new line, [body]
+    end
     
     RBX::AST::Class.new line, name, superclass, body
   end
@@ -445,7 +443,9 @@ class RubiniusBuilder < Parser::Builders::Default
   def def_module(module_t, name, body, end_t)
     line = line(module_t)
     name = name.name if name.is_a? RBX::AST::ConstantAccess
-    body = RBX::AST::Block.new line, [body] unless body.is_a? RBX::AST::Block
+    body = unless body.is_a?(RBX::AST::NilLiteral) || body.is_a?(RBX::AST::Block)
+      RBX::AST::Block.new line, [body]
+    end
     
     RBX::AST::Module.new line, name, body
   end
@@ -957,7 +957,7 @@ private
   instance_methods.each do |sym|
     deco sym do |*args, &block|
       begin
-        # p sym
+        p sym
         deco_super *args, &block
       rescue Exception=>e
         p sym
@@ -972,31 +972,31 @@ private
 end
 
 
-# class RBX::AST::AttributeAssignment
-#   # class << self
-#     # deco :to_sexp do |*args|
-#     def to_sexp
-#       p self
+# class RBX::AST::Class
+#   class << self
+#     deco :new do |*args|
+#     # def to_sexp
+#       p args
 #       # p args
 #       # p @arguments
 #       deco_super *args
 #     end
-#   # end
+#   end
 # end
 
 
-class String
-  def to_sexp
-    pr = Parser::CurrentRuby.new RubiniusBuilder.new
+# class String
+#   def to_sexp
+#     pr = Parser::CurrentRuby.new RubiniusBuilder.new
 
-    buffer = Parser::Source::Buffer.new('(string)')
-    buffer.source = self
+#     buffer = Parser::Source::Buffer.new('(string)')
+#     buffer.source = self
     
-    node = pr.parse buffer
-    # p node
-    node.to_sexp
-  end
-end
+#     node = pr.parse buffer
+#     # p node
+#     node.to_sexp
+#   end
+# end
 
 class << Object.new
   class << self
