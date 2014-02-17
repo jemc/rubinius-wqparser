@@ -365,6 +365,8 @@ class RubiniusBuilder < Parser::Builders::Default
       RBX::AST::LocalVariableAssignment.new line, name, rhs
     when RBX::AST::InstanceVariableAccess
       RBX::AST::InstanceVariableAssignment.new line, name, rhs
+    when RBX::AST::ClassVariableAccess
+      RBX::AST::ClassVariableAssignment.new line, name, rhs
     when RBX::AST::GlobalVariableAccess
       RBX::AST::GlobalVariableAssignment.new line, name, rhs
     else
@@ -456,20 +458,14 @@ class RubiniusBuilder < Parser::Builders::Default
     RBX::AST::Define.new line, name, body
   end
 
-  # def def_singleton(def_t, definee, dot_t,
-  #                   name_t, args,
-  #                   body, end_t)
-  #   case definee.type
-  #   when :int, :str, :dstr, :sym, :dsym,
-  #        :regexp, :array, :hash
-
-  #     diagnostic :error, :singleton_literal, nil, definee.loc.expression
-
-  #   else
-  #     n(:defs, [ definee, value(name_t).to_sym, args, body ],
-  #       definition_map(def_t, dot_t, name_t, end_t))
-  #   end
-  # end
+  def def_singleton(def_t, definee, dot_t, name_t, args, body, end_t)
+    line = line(def_t)
+    name = value(name_t).to_sym
+    body = RBX::AST::Block.new line, [body] unless body.is_a? RBX::AST::Block
+    body.array.unshift args
+    
+    RBX::AST::DefineSingleton.new line, definee, name, body
+  end
 
   # def undef_method(undef_t, names)
   #   n(:undef, [ *names ],
