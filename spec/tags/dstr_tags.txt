@@ -1,2 +1,0 @@
-fails:"A Dstr node is parsed from \n    argl = 1\n    "x#{argl}y""
-fails:"A Dstr node is parsed from \n    max = 2\n    argl = 1\n    "x#{("%.#{max}f" % 3.14159)}y""

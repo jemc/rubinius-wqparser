@@ -252,10 +252,9 @@ class RubiniusBuilder < Parser::Builders::Default
   # Access
   #
 
-  # def self(token)
-  #   n0(:self,
-  #     token_map(token))
-  # end
+  def self(token)
+    RBX::AST::Self.new line(token)
+  end
 
   def ident(token)
     # RBX::AST::LocalVariableAccess.new line(token), value(token).to_sym
@@ -286,7 +285,12 @@ class RubiniusBuilder < Parser::Builders::Default
   # end
   
   def accessible(node)
-    node
+    if node.is_a?(RBX::AST::Send) && node.privately && node.receiver == nil \
+    && @parser.static_env.declared?(node.name)
+      RBX::AST::LocalVariableAccess.new node.line, node.name
+    else
+      node
+    end
   end
   
   def const(token)
@@ -334,6 +338,15 @@ class RubiniusBuilder < Parser::Builders::Default
   #
 
   def assignable(node)
+    
+    if node.is_a?(RBX::AST::Send) && node.privately && node.receiver == nil
+      @parser.static_env.declare(node.name)
+    elsif node.is_a?(RBX::AST::LocalVariableAccess)
+      @parser.static_env.declare(node.name)
+    elsif node.is_a?(RBX::AST::LocalVariableAssignment)
+      @parser.static_env.declare(node.name)
+    end
+    
     node
   end
 
@@ -363,6 +376,12 @@ class RubiniusBuilder < Parser::Builders::Default
   def op_assign(lhs, op_t, rhs)
     line = lhs.line
     name = value(op_t).to_sym
+    
+    if lhs.is_a?(RBX::AST::Send) && lhs.privately && lhs.receiver == nil \
+    && @parser.static_env.declared?(lhs.name)
+      lhs = RBX::AST::LocalVariableAccess.new line, name
+    end
+    
     send = RBX::AST::SendWithArguments.new line, lhs, name, rhs
     
     RBX::AST::LocalVariableAssignment.new line, lhs.name, send
@@ -471,7 +490,7 @@ class RubiniusBuilder < Parser::Builders::Default
     splat    = args.detect { |type, arg| type == :splat    }; splat = splat.last if splat
     post     = args.detect { |type, arg| type == :post     }; post  = post .last if post
     block    = args.detect { |type, arg| type == :block    }; block = block.last if block
-    # binding.pry
+    
     RBX::AST::FormalArguments19.new line, required, nil, splat, post, block
   end
 
@@ -713,13 +732,13 @@ class RubiniusBuilder < Parser::Builders::Default
   # Keywords
 
   def keyword_cmd(type, keyword_t, lparen_t=nil, elements=[], rparen_t=nil)
-    if type == :yield && args.count > 0
-      raise 'boom boom'
-      # last_arg = args.last
-      # if last_arg.type == :block_pass
-      #   diagnostic :error, :block_given_to_yield, nil, loc(keyword_t), [last_arg.loc.expression]
-      # end
-    end
+    # if type == :yield && args.count > 0
+    #   raise 'boom boom'
+    #   # last_arg = args.last
+    #   # if last_arg.type == :block_pass
+    #   #   diagnostic :error, :block_given_to_yield, nil, loc(keyword_t), [last_arg.loc.expression]
+    #   # end
+    # end
     
     line = line(keyword_t)
     value = \
@@ -745,6 +764,10 @@ class RubiniusBuilder < Parser::Builders::Default
       RBX::AST::Super.new line, value
     when :zsuper
       RBX::AST::ZSuper.new line
+    when :defined?
+      RBX::AST::Defined.new line, value
+    when :yield
+      RBX::AST::Yield.new line, value, false
     else
       raise "boom boom boom #{type.inspect}"
     end

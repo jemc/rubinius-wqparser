@@ -1,1 +1,0 @@
-fails:"A Match2 node is parsed from \n    x = "x"\n    /#{x}/ =~ x"

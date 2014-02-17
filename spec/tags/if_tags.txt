@@ -1,2 +1,0 @@
-fails:"An If node is parsed from \n    if x = obj.x then\n      x.do_it\n    end"
-fails:"An If node is parsed from \n    if (x = 5\n    (x + 1)) then\n      nil\n    end"

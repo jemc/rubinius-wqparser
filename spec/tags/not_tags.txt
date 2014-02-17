@@ -1,1 +1,0 @@
-fails:"A Not node is parsed from \n    a = 1\n    b = !a"

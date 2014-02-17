@@ -1,2 +1,1 @@
 fails:An Array node is parsed from '[[*1]]'
-fails:"An Array node is parsed from \n    x = [2]\n    [1, *x]"
