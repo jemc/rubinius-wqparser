@@ -101,30 +101,12 @@ class RubiniusBuilder < Parser::Builders::Default
   end
   
   def symbol_compose(begin_t, parts, end_t)
-    line = parts.first.line
+    dynamic, line, string, parts = compose_parts(parts)
     
-    if parts.one?
-      str = parts.first
-      
-      RBX::AST::SymbolLiteral.new line, str.string.to_sym
+    if dynamic
+      RBX::AST::DynamicSymbol.new line, string, parts
     else
-      if parts.detect { |part| !part.is_a? RBX::AST::StringLiteral }
-        first = parts.shift.string if parts.first.is_a? RBX::AST::StringLiteral
-        first ||= ''
-        
-        parts.map! do |part|
-          if part.is_a? RBX::AST::StringLiteral
-            part
-          else
-            RBX::AST::ToString.new line, part
-          end
-        end
-        
-        RBX::AST::DynamicSymbol.new line, first, [*parts]
-      else
-        value = parts.map(&:string).join
-        RBX::AST::SymbolLiteral.new line, value
-      end
+      RBX::AST::SymbolLiteral.new line, string.string.to_sym
     end
   end
   
