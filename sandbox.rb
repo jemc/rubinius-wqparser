@@ -257,7 +257,6 @@ class RubiniusBuilder < Parser::Builders::Default
   end
 
   def ident(token)
-    # RBX::AST::LocalVariableAccess.new line(token), value(token).to_sym
     receiver = RBX::AST::Self.new line(token)
     RBX::AST::Send.new line(token), receiver, value(token).to_sym, true
   end
@@ -274,10 +273,9 @@ class RubiniusBuilder < Parser::Builders::Default
     RBX::AST::ClassVariableAccess.new line(token), value(token).to_sym
   end
 
-  # def back_ref(token)
-  #   n(:back_ref, [ value(token).to_sym ],
-  #     token_map(token))
-  # end
+  def back_ref(token)
+    RBX::AST::BackRef.new line(token), value(token)[1..-1].to_sym
+  end
 
   # def nth_ref(token)
   #   n(:nth_ref, [ value(token) ],
