@@ -452,10 +452,9 @@ class RubiniusBuilder < Parser::Builders::Default
   #     keyword_map(undef_t, nil, names, nil))
   # end
 
-  # def alias(alias_t, to, from)
-  #   n(:alias, [ to, from ],
-  #     keyword_map(alias_t, nil, [to, from], nil))
-  # end
+  def alias(alias_t, to, from)
+    RBX::AST::Alias.new line(alias_t), to, from
+  end
 
   #
   # Formal arguments
