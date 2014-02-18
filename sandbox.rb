@@ -983,7 +983,7 @@ private
   end
   
   def check_condition(cond)
-    case cond
+    # case cond
     # when :masgn
     #   diagnostic :error, :masgn_as_condition, nil, cond.loc.expression
 
@@ -1014,11 +1014,13 @@ private
     #     ])
     #   end
 
-    when RBX::AST::RegexLiteral
+    kls = cond.class
+    
+    if    kls == RBX::AST::RegexLiteral
       RBX::AST::Match.new cond.line, cond.source, cond.options
-    when RBX::AST::Range
+    elsif kls == RBX::AST::Range
       RBX::AST::Flip2.new cond.line, cond.start, cond.finish
-    when RBX::AST::RangeExclude
+    elsif kls == RBX::AST::RangeExclude
       RBX::AST::Flip3.new cond.line, cond.start, cond.finish
     else
       cond
