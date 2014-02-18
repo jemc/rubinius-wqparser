@@ -722,11 +722,13 @@ class RubiniusBuilder < Parser::Builders::Default
     end
   end
 
-  # def for(for_t, iterator, in_t, iteratee,
-  #         do_t, body, end_t)
-  #   n(:for, [ iterator, iteratee, body ],
-  #     for_map(for_t, in_t, do_t, end_t))
-  # end
+  def for(for_t, iterator, in_t, iteratee, do_t, body, end_t)
+    line = line(for_t)
+    
+    send = RBX::AST::Send.new line, iteratee, :each
+    send.block = RBX::AST::For19.new line, iterator, body
+    send
+  end
 
   # Keywords
 
@@ -781,12 +783,16 @@ class RubiniusBuilder < Parser::Builders::Default
   #     keyword_map(preexe_t, lbrace_t, [], rbrace_t))
   # end
 
-  # def postexe(postexe_t, lbrace_t, compstmt, rbrace_t)
-  #   n(:postexe, [ compstmt ],
-  #     keyword_map(postexe_t, lbrace_t, [], rbrace_t))
-  # end
+  def postexe(postexe_t, lbrace_t, compstmt, rbrace_t)
+    line = line(postexe_t)
+    body = RBX::AST::Block.new line, [compstmt]
+    
+    node = RBX::AST::Send.new line, RBX::AST::Self.new(line), :at_exit, true
+    node.block = RBX::AST::Iter.new line, nil, body
+    node
+  end
 
-  # # Exception handling
+  # Exception handling
 
   def rescue_body(rescue_t, exc_list, assoc_t, exc_var, then_t, compound_stmt)
     blk = if exc_var
