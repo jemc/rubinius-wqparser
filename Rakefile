@@ -19,7 +19,7 @@ require "redcard"
 
 desc "Run the specs"
 task :spec => dependencies do
-  exec "mspec spec -G fails -f s"
+  exec "mspec spec -G fails"
 end
 
 task :sandbox do

@@ -277,10 +277,9 @@ class RubiniusBuilder < Parser::Builders::Default
     RBX::AST::BackRef.new line(token), value(token)[1..-1].to_sym
   end
 
-  # def nth_ref(token)
-  #   n(:nth_ref, [ value(token) ],
-  #     token_map(token))
-  # end
+  def nth_ref(token)
+    RBX::AST::NthRef.new line(token), value(token)
+  end
   
   def accessible(node)
     if node.is_a?(RBX::AST::Send) && node.privately \
@@ -296,10 +295,7 @@ class RubiniusBuilder < Parser::Builders::Default
   end
 
   def const_global(t_colon3, token)
-    line = line(token)
-    name = value(token).to_sym
-    
-    RBX::AST::ToplevelConstant.new line, name
+    RBX::AST::ToplevelConstant.new line(token), value(token).to_sym
   end
 
   def const_fetch(outer, t_colon2, token)
