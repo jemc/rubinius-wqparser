@@ -696,25 +696,31 @@ class RubiniusBuilder < Parser::Builders::Default
 
   def loop(type, keyword_t, cond, do_t, body, end_t)
     line = line(keyword_t)
+    check_first = true
     
     case type
     when :while
-      RBX::AST::While.new line, cond, body, true # check_first
+      RBX::AST::While.new line, check_condition(cond), body, check_first
+    when :until
+      RBX::AST::Until.new line, check_condition(cond), body, check_first
     else
-      raise "boom a loom #{keyword_t}"
+      raise "boom a loom #{type}"
     end
-    # n(type, [ check_condition(cond), body ],
-    #   keyword_map(keyword_t, do_t, nil, end_t))
   end
 
-  # def loop_mod(type, body, keyword_t, cond)
-  #   if body.type == :kwbegin
-  #     type = :"#{type}_post"
-  #   end
-
-  #   n(type, [ check_condition(cond), body ],
-  #     keyword_mod_map(body, keyword_t, cond))
-  # end
+  def loop_mod(type, body, keyword_t, cond)
+    line = line(keyword_t)
+    check_first = !body.is_a?(RBX::AST::Begin)
+    
+    case type
+    when :while
+      RBX::AST::While.new line, check_condition(cond), body, check_first
+    when :until
+      RBX::AST::Until.new line, check_condition(cond), body, check_first
+    else
+      raise "boom a loom #{type}"
+    end
+  end
 
   # def for(for_t, iterator, in_t, iteratee,
   #         do_t, body, end_t)
