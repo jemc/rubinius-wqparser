@@ -355,26 +355,7 @@ class RubiniusBuilder < Parser::Builders::Default
   # end
 
   def assign(lhs, eql_t, rhs)
-    line = line(eql_t)
-    name = lhs.name
-    
-    if    lhs.class == RBX::AST::Send
-      RBX::AST::LocalVariableAssignment.new line, name, rhs
-    elsif lhs.class == RBX::AST::LocalVariableAccess
-      RBX::AST::LocalVariableAssignment.new line, name, rhs
-    elsif lhs.class == RBX::AST::InstanceVariableAccess
-      RBX::AST::InstanceVariableAssignment.new line, name, rhs
-    elsif lhs.class == RBX::AST::ClassVariableAccess
-      RBX::AST::ClassVariableAssignment.new line, name, rhs
-    elsif lhs.class == RBX::AST::GlobalVariableAccess
-      RBX::AST::GlobalVariableAssignment.new line, name, rhs
-    elsif lhs.class == RBX::AST::AttributeAssignment
-      lhs.arguments = RBX::AST::ActualArguments.new line, rhs
-      lhs
-    else
-      # binding.pry
-      raise 'bomb!'
-    end
+    convert_to_assignment line(eql_t), lhs, rhs
   end
 
   def op_assign(lhs, op_t, rhs)
@@ -718,12 +699,20 @@ class RubiniusBuilder < Parser::Builders::Default
   #     condition_map(case_t, expr, nil, nil, else_t, else_body, end_t))
   # end
 
-  # # Loops
+  # Loops
 
-  # def loop(type, keyword_t, cond, do_t, body, end_t)
-  #   n(type, [ check_condition(cond), body ],
-  #     keyword_map(keyword_t, do_t, nil, end_t))
-  # end
+  def loop(type, keyword_t, cond, do_t, body, end_t)
+    line = line(keyword_t)
+    
+    case type
+    when :while
+      RBX::AST::While.new line, cond, body, true # check_first
+    else
+      raise "boom a loom #{keyword_t}"
+    end
+    # n(type, [ check_condition(cond), body ],
+    #   keyword_map(keyword_t, do_t, nil, end_t))
+  end
 
   # def loop_mod(type, body, keyword_t, cond)
   #   if body.type == :kwbegin
@@ -779,6 +768,8 @@ class RubiniusBuilder < Parser::Builders::Default
       RBX::AST::Defined.new line, value
     when :yield
       RBX::AST::Yield.new line, value, false
+    when :break
+      RBX::AST::Break.new line, value
     else
       raise "boom boom boom #{type.inspect}"
     end
@@ -798,40 +789,64 @@ class RubiniusBuilder < Parser::Builders::Default
 
   # # Exception handling
 
-  # def rescue_body(rescue_t,
-  #                 exc_list, assoc_t, exc_var,
-  #                 then_t, compound_stmt)
-  #   n(:resbody, [ exc_list, exc_var, compound_stmt ],
-  #     rescue_body_map(rescue_t, exc_list, assoc_t,
-  #                     exc_var, then_t, compound_stmt))
-  # end
+  def rescue_body(rescue_t, exc_list, assoc_t, exc_var, then_t, compound_stmt)
+    blk = if exc_var
+      line = line(assoc_t)
+      last_e = RBX::AST::CurrentException.new line
+      e_asgn = convert_to_assignment line, exc_var, last_e
+      RBX::AST::Block.new compound_stmt.line, [e_asgn, compound_stmt]
+    else
+      RBX::AST::Block.new compound_stmt.line, [compound_stmt]
+    end
+    
+    RBX::AST::RescueCondition.new line(rescue_t), exc_list, blk, nil
+  end
 
-  # def begin_body(compound_stmt, rescue_bodies=[],
-  #                else_t=nil,    else_=nil,
-  #                ensure_t=nil,  ensure_=nil)
-  #   if rescue_bodies.any?
-  #     if else_t
-  #       compound_stmt =
-  #         n(:rescue,
-  #           [ compound_stmt, *(rescue_bodies + [ else_ ]) ],
-  #           eh_keyword_map(compound_stmt, nil, rescue_bodies, else_t, else_))
-  #     else
-  #       compound_stmt =
-  #         n(:rescue,
-  #           [ compound_stmt, *(rescue_bodies + [ nil ]) ],
-  #           eh_keyword_map(compound_stmt, nil, rescue_bodies, nil, nil))
-  #     end
-  #   end
+  def begin_body(compound_stmt, rescue_bodies=[],
+                 else_t=nil,    else_=nil,
+                 ensure_t=nil,  ensure_=nil)
+    # if rescue_bodies.any?
+    #   if else_t
+    #     compound_stmt =
+    #     RBX::AST::Rescue.new line(else_t), compound_stmt, rescue_bodies.first, else_
+    #       # n(:rescue,
+    #       #   [ compound_stmt, *(rescue_bodies + [ else_ ]) ],
+    #       #   eh_keyword_map(compound_stmt, nil, rescue_bodies, else_t, else_))
+    #   else
+    #     compound_stmt =
+    #     RBX::AST::Rescue.new line(else_t), compound_stmt, rescue_bodies.first, else_
+    #     #   n(:rescue,
+    #     #     [ compound_stmt, *(rescue_bodies + [ nil ]) ],
+    #     #     eh_keyword_map(compound_stmt, nil, rescue_bodies, nil, nil))
+    #   end
+    # end
+    
+    first = nil
+    last = nil
+    rescue_bodies.each do |resbody|
+      if last
+        last.next = resbody
+      else
+        first = resbody
+      end
+      
+      last = resbody
+    end
+    
+    if rescue_bodies.any?
+      compound_stmt = RBX::AST::Rescue.new line(else_t), compound_stmt, first, else_
+    end
+    
+    if ensure_t
+      compound_stmt =
+        RBX::AST::Ensure.new line(ensure_t), compound_stmt, ensure_
+        # n(:ensure,
+        #   [ compound_stmt, ensure_ ],
+        #   eh_keyword_map(compound_stmt, ensure_t, [ ensure_ ], nil, nil))
+    end
 
-  #   if ensure_t
-  #     compound_stmt =
-  #       n(:ensure,
-  #         [ compound_stmt, ensure_ ],
-  #         eh_keyword_map(compound_stmt, ensure_t, [ ensure_ ], nil, nil))
-  #   end
-
-  #   compound_stmt
-  # end
+    compound_stmt
+  end
 
   
   
@@ -870,21 +885,24 @@ class RubiniusBuilder < Parser::Builders::Default
     end
   end
   
-  # def begin_keyword(begin_t, body, end_t)
-  #   if body.nil?
-  #     # A nil expression: `begin end'.
-  #     n0(:kwbegin,
-  #       collection_map(begin_t, nil, end_t))
-  #   elsif (body.type == :begin &&
-  #          body.loc.begin.nil? && body.loc.end.nil?)
-  #     # Synthesized (begin) from compstmt "a; b".
-  #     n(:kwbegin, body.children,
-  #       collection_map(begin_t, body.children, end_t))
-  #   else
-  #     n(:kwbegin, [ body ],
-  #       collection_map(begin_t, [ body ], end_t))
-  #   end
-  # end
+  def begin_keyword(begin_t, body, end_t)
+    if body.nil?
+      # A nil expression: `begin end'.
+      raise 'boom1!'
+      n0(:kwbegin,
+        collection_map(begin_t, nil, end_t))
+    # elsif (body.type == :begin &&
+    #        body.loc.begin.nil? && body.loc.end.nil?)
+    #   raise 'boom2!'
+    #   # Synthesized (begin) from compstmt "a; b".
+    #   n(:kwbegin, body.children,
+    #     collection_map(begin_t, body.children, end_t))
+    else
+      x = RBX::AST::Begin.new line(begin_t), body
+      # p body.to_sexp
+      x
+    end
+  end
   
 private
   
@@ -922,6 +940,29 @@ private
       body
     else
       RBX::AST::Block.new line, [body]
+    end
+  end
+  
+  def convert_to_assignment(line, orig, value)
+    name = orig.name
+    kls  = orig.class
+    
+    if    kls == RBX::AST::Send
+      RBX::AST::LocalVariableAssignment.new line, name, value
+    elsif kls == RBX::AST::LocalVariableAccess
+      RBX::AST::LocalVariableAssignment.new line, name, value
+    elsif kls == RBX::AST::InstanceVariableAccess
+      RBX::AST::InstanceVariableAssignment.new line, name, value
+    elsif kls == RBX::AST::ClassVariableAccess
+      RBX::AST::ClassVariableAssignment.new line, name, value
+    elsif kls == RBX::AST::GlobalVariableAccess
+      RBX::AST::GlobalVariableAssignment.new line, name, value
+    elsif kls == RBX::AST::AttributeAssignment
+      orig.arguments = RBX::AST::ActualArguments.new line, value
+      orig
+    else
+      # binding.pry
+      raise 'bomb!'
     end
   end
   
@@ -986,7 +1027,7 @@ private
 end
 
 
-# class RBX::AST::Class
+# class RBX::AST::RescueCondition
 #   class << self
 #     deco :new do |*args|
 #     # def to_sexp
@@ -1019,5 +1060,5 @@ class << Object.new
       puts "actual: #{str.to_sexp.inspect}"
     end
   end
-  
+
 end
