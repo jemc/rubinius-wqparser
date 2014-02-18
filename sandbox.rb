@@ -963,11 +963,17 @@ private
       RBX::AST::ClassVariableAssignment.new line, name, value
     elsif kls == RBX::AST::GlobalVariableAccess
       RBX::AST::GlobalVariableAssignment.new line, name, value
+    elsif kls == RBX::AST::ConstantAccess
+      RBX::AST::ConstantAssignment.new line, name, value
+    elsif kls == RBX::AST::ToplevelConstant
+      RBX::AST::ConstantAssignment.new line, orig, value
+    elsif kls == RBX::AST::ScopedConstant
+      RBX::AST::ConstantAssignment.new line, orig, value
     elsif kls == RBX::AST::AttributeAssignment
       orig.arguments = RBX::AST::ActualArguments.new line, value
       orig
     else
-      # binding.pry
+      binding.pry
       raise 'bomb!'
     end
   end
