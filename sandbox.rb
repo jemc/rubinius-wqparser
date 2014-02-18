@@ -139,15 +139,19 @@ class RubiniusBuilder < Parser::Builders::Default
       'u' => (4 << 9), # RE_KCODE_UTF8
       'o' => 0, # RE_OPTION_ONCE (8192, but ignored for literal Regexp)
     }
+    value = value(regopt_t)
     
-    value(regopt_t).each_char.map { |chr| opt_convert[chr] }.inject(&:+) or 0
+    [(value.include? 'o'),
+     (value.each_char.map { |chr| opt_convert[chr] }.inject(&:+) or 0)]
   end
   
   def regexp_compose(begin_t, parts, end_t, options)
     dynamic, line, string, parts = compose_parts(parts)
+    once, options = options
     
     if dynamic
-      RBX::AST::DynamicRegex.new line, string, parts, options
+      once ? RBX::AST::DynamicOnceRegex.new(line, string, parts, options) :
+             RBX::AST::DynamicRegex    .new(line, string, parts, options)
     else
       RBX::AST::RegexLiteral.new line, string.string, options
     end
