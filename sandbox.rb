@@ -1016,6 +1016,10 @@ private
 
     when RBX::AST::RegexLiteral
       RBX::AST::Match.new cond.line, cond.source, cond.options
+    when RBX::AST::Range
+      RBX::AST::Flip2.new cond.line, cond.start, cond.finish
+    when RBX::AST::RangeExclude
+      RBX::AST::Flip3.new cond.line, cond.start, cond.finish
     else
       cond
     end
