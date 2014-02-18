@@ -447,10 +447,10 @@ class RubiniusBuilder < Parser::Builders::Default
     RBX::AST::DefineSingleton.new line, definee, name, body
   end
 
-  # def undef_method(undef_t, names)
-  #   n(:undef, [ *names ],
-  #     keyword_map(undef_t, nil, names, nil))
-  # end
+  def undef_method(undef_t, names)
+    line = line(undef_t)
+    compstmt names.map { |name| RBX::AST::Undef.new line, name }
+  end
 
   def alias(alias_t, to, from)
     RBX::AST::Alias.new line(alias_t), to, from
@@ -866,6 +866,7 @@ class RubiniusBuilder < Parser::Builders::Default
     when statements.one?
       statements.first
     else
+      statements.map! { |s| s.class==RBX::AST::Block ? s.array : s }.flatten!
       RBX::AST::Block.new statements.first.line, statements
     end
   end
