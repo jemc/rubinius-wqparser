@@ -1,1 +1,0 @@
-fails:An Array node is parsed from '[[*1]]'

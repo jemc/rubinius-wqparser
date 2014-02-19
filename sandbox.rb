@@ -163,11 +163,20 @@ class RubiniusBuilder < Parser::Builders::Default
   def array(begin_t, elements, end_t)
     line = line(begin_t)
     
-    if elements.detect { |x| x.is_a?(RBX::AST::SplatValue) or x.is_a?(RBX::AST::Send) or x.is_a?(RBX::AST::SendWithArguments)}
+    if elements.detect { |x| x.is_a?(RBX::AST::SplatValue) \
+    or x.is_a?(RBX::AST::Send) or x.is_a?(RBX::AST::SendWithArguments) }
       if elements.empty?
         RBX::AST::NilLiteral.new line
       elsif elements.one?
-        elements.first
+        element = elements.first
+        if element.is_a? RBX::AST::SplatValue
+          if element.instance_variable_get :@sated
+            element = RBX::AST::ArrayLiteral.new line, [element]
+          else
+            element.instance_variable_set :@sated, true
+          end
+        end
+        element
       else
         rest = elements.pop.value
         array = RBX::AST::ArrayLiteral.new line, elements
@@ -612,11 +621,9 @@ class RubiniusBuilder < Parser::Builders::Default
   #     send_index_map(receiver, lbrack_t, rbrack_t))
   # end
 
-  # def index_asgn(receiver, lbrack_t, indexes, rbrack_t)
-  #   # Incomplete method call.
-  #   n(:send, [ receiver, :[]=, *indexes ],
-  #     send_index_map(receiver, lbrack_t, rbrack_t))
-  # end
+  def index_asgn(receiver, lbrack_t, indexes, rbrack_t)
+    RBX::AST::ElementAssignment.new line(lbrack_t), receiver, indexes
+  end
 
   def binary_op(receiver, operator_t, arg)
     line = receiver.line
@@ -980,6 +987,9 @@ private
       RBX::AST::ConstantAssignment.new line, orig, value
     elsif kls == RBX::AST::AttributeAssignment
       orig.arguments = RBX::AST::ActualArguments.new line, value
+      orig
+    elsif kls == RBX::AST::ElementAssignment
+      # orig.arguments = RBX::AST::ActualArguments.new line, value
       orig
     else
       binding.pry
