@@ -617,10 +617,12 @@ class RubiniusBuilder < Parser::Builders::Default
     #   send_map(receiver, dot_t, selector_t))
   end
 
-  # def index(receiver, lbrack_t, indexes, rbrack_t)
-  #   n(:send, [ receiver, :[], *indexes ],
-  #     send_index_map(receiver, lbrack_t, rbrack_t))
-  # end
+  def index(receiver, lbrack_t, indexes, rbrack_t)
+    line = line(lbrack_t)
+    args = RBX::AST::ArrayLiteral.new line(lbrack_t), indexes
+    
+    RBX::AST::SendWithArguments.new line(lbrack_t), receiver, :[], args
+  end
 
   def index_asgn(receiver, lbrack_t, indexes, rbrack_t)
     RBX::AST::ElementAssignment.new line(lbrack_t), receiver, indexes
@@ -644,17 +646,12 @@ class RubiniusBuilder < Parser::Builders::Default
     end
   end
 
-  # def unary_op(op_t, receiver)
-  #   case value(op_t)
-  #   when '+', '-'
-  #     method = value(op_t) + '@'
-  #   else
-  #     method = value(op_t)
-  #   end
-
-  #   n(:send, [ receiver, method.to_sym ],
-  #     send_unary_op_map(op_t, receiver))
-  # end
+  def unary_op(op_t, receiver)
+    method = value(op_t)
+    method += '@' if '+'==method or '-'==method
+    
+    RBX::AST::Send.new line(op_t), receiver, method.to_sym
+  end
 
   def not_op(not_t, begin_t=nil, receiver=nil, end_t=nil)
     # RBX::AST::Not.new line(not_t), receiver
