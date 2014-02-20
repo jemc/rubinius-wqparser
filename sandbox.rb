@@ -162,6 +162,7 @@ class RubiniusBuilder < Parser::Builders::Default
 
   def array(begin_t, elements, end_t)
     line = line(begin_t)
+    elements ||= []
     
     if elements.detect { |x| x.is_a?(RBX::AST::SplatValue) \
     or x.is_a?(RBX::AST::Send) or x.is_a?(RBX::AST::SendWithArguments) }
@@ -749,20 +750,18 @@ class RubiniusBuilder < Parser::Builders::Default
   # Keywords
 
   def keyword_cmd(type, keyword_t, lparen_t=nil, elements=[], rparen_t=nil)
-    # if type == :yield && args.count > 0
-    #   raise 'boom boom'
-    #   # last_arg = args.last
-    #   # if last_arg.type == :block_pass
-    #   #   diagnostic :error, :block_given_to_yield, nil, loc(keyword_t), [last_arg.loc.expression]
-    #   # end
-    # end
-    
     line = line(keyword_t)
     value = \
       if elements.empty?
         nil
       elsif elements.one? && !elements.first.is_a?(RBX::AST::ArrayLiteral)
-        elements.first
+        element = elements.first
+        if type == :yield \
+        && element.is_a?(RBX::AST::SplatValue) \
+        && (element.instance_variable_get :@sated)
+          element = RBX::AST::ArrayLiteral.new line, [element]
+        end
+        element
       else
         x = elements.last
         if x.is_a?(RBX::AST::SplatValue) or x.is_a?(RBX::AST::Send) or x.is_a?(RBX::AST::SendWithArguments)
@@ -784,7 +783,7 @@ class RubiniusBuilder < Parser::Builders::Default
     when :defined?
       RBX::AST::Defined.new line, value
     when :yield
-      RBX::AST::Yield.new line, value, false
+      RBX::AST::Yield.new line, value, true
     when :break
       RBX::AST::Break.new line, value
     else
@@ -1093,6 +1092,7 @@ end
 class << Object.new
   class << self
     def parse str, &block
+      puts "      : #{str}"
       puts "expect: #{block.call.inspect}"
       puts "actual: #{str.to_sexp.inspect}"
     end
