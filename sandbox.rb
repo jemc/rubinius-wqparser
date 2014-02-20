@@ -179,7 +179,8 @@ class RubiniusBuilder < Parser::Builders::Default
         end
         element
       else
-        rest = elements.pop.value
+        rest = elements.pop
+        rest = rest.value if rest.respond_to? :value
         array = RBX::AST::ArrayLiteral.new line, elements
         RBX::AST::ConcatArgs.new line, array, rest
       end
@@ -602,30 +603,22 @@ class RubiniusBuilder < Parser::Builders::Default
   end
 
   def attr_asgn(receiver, dot_t, selector_t)
-    line = line(dot_t)
-    name = value(selector_t).to_sym
-    arguments = []
-    
-    if name == :[]
-      RBX::AST::ElementAssignment.new line, receiver, arguments
-    else
-      RBX::AST::AttributeAssignment.new line, receiver, name, arguments
-    end
-    
-    # # Incomplete method call.
-    # n(:send, [ receiver, method_name ],
-    #   send_map(receiver, dot_t, selector_t))
+    RBX::AST::AttributeAssignment.new \
+      line(dot_t), receiver, value(selector_t).to_sym, []
   end
 
   def index(receiver, lbrack_t, indexes, rbrack_t)
     line = line(lbrack_t)
-    args = RBX::AST::ArrayLiteral.new line(lbrack_t), indexes
+    args = RBX::AST::ArrayLiteral.new line, indexes
     
-    RBX::AST::SendWithArguments.new line(lbrack_t), receiver, :[], args
+    RBX::AST::SendWithArguments.new line, receiver, :[], args
   end
 
   def index_asgn(receiver, lbrack_t, indexes, rbrack_t)
-    RBX::AST::ElementAssignment.new line(lbrack_t), receiver, indexes
+    line = line(lbrack_t)
+    args = RBX::AST::ArrayLiteral.new line, indexes
+    
+    RBX::AST::ElementAssignment.new line, receiver, args
   end
 
   def binary_op(receiver, operator_t, arg)
@@ -985,7 +978,7 @@ private
       orig.arguments = RBX::AST::ActualArguments.new line, value
       orig
     elsif kls == RBX::AST::ElementAssignment
-      # orig.arguments = RBX::AST::ActualArguments.new line, value
+      orig.arguments.array << value
       orig
     else
       binding.pry
@@ -1060,14 +1053,16 @@ private
 end
 
 
-# class RBX::AST::RescueCondition
+# class RBX::AST::ElementAssignment
 #   class << self
 #     deco :new do |*args|
 #     # def to_sexp
 #       p args
+#       args.shift
+#       p args.map &:to_sexp
 #       # p args
 #       # p @arguments
-#       deco_super *args
+#       deco_super *[1, *args]
 #     end
 #   end
 # end
