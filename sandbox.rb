@@ -771,13 +771,19 @@ class RubiniusBuilder < Parser::Builders::Default
     value = \
       if elements.empty?
         nil
-      elsif elements.one? && !elements.first.is_a?(RBX::AST::ArrayLiteral)
+      elsif elements.one?
         element = elements.first
-        if type == :yield \
-        && element.is_a?(RBX::AST::SplatValue) \
-        && (element.instance_variable_get :@sated)
-          element = RBX::AST::ArrayLiteral.new line, [element]
+        
+        if type == :yield or type == :super
+          if element.is_a?(RBX::AST::SplatValue)
+            if (element.instance_variable_get :@sated)
+              element = RBX::AST::ArrayLiteral.new line, elements
+            end
+          else
+            element = RBX::AST::ArrayLiteral.new line, elements
+          end
         end
+        
         element
       else
         x = elements.last
@@ -803,6 +809,12 @@ class RubiniusBuilder < Parser::Builders::Default
       RBX::AST::Yield.new line, value, true
     when :break
       RBX::AST::Break.new line, value
+    when :redo
+      RBX::AST::Redo.new line
+    when :retry
+      RBX::AST::Retry.new line
+    when :next
+      RBX::AST::Next.new line, value
     else
       raise "boom boom boom #{type.inspect}"
     end
