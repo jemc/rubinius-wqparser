@@ -350,6 +350,15 @@ class RubiniusBuilder < Parser::Builders::Default
     
     if node.is_a?(RBX::AST::Send) && node.privately
       @parser.static_env.declare(node.name)
+      # if node.privately
+        node = RBX::AST::LocalVariableAccess.new node.line, node.name
+      # elsif node.receiver
+        # assignable(node.receiver)# if node.respond_to? :receiver
+        # node = RBX::AST::AttributeAssignment.new \
+        #   node.line, assignable(node.receiver), node.name, []
+        # p nod
+        # node = RBX::AST::
+      # end
     elsif node.is_a?(RBX::AST::LocalVariableAccess)
       @parser.static_env.declare(node.name)
     elsif node.is_a?(RBX::AST::LocalVariableAssignment)
@@ -371,14 +380,25 @@ class RubiniusBuilder < Parser::Builders::Default
     line = lhs.line
     name = value(op_t).to_sym
     
-    if lhs.is_a?(RBX::AST::Send) && lhs.privately && lhs.receiver == nil \
-    && @parser.static_env.declared?(lhs.name)
-      lhs = RBX::AST::LocalVariableAccess.new line, name
+    if lhs.is_a?(RBX::AST::Send)
+      if lhs.name == :[]
+        ary = RBX::AST::ArrayLiteral.new line, lhs.arguments.array
+        RBX::AST::OpAssign1.new line, lhs.receiver, ary, name, rhs
+      else
+        RBX::AST::OpAssign2.new line, lhs.receiver, lhs.name, name, rhs
+      end
+    else
+      lhs = assignable(lhs)
+      rhs = convert_to_assignment(line, lhs, rhs)
+      
+      case name
+      when :'&&'; RBX::AST::OpAssignAnd.new line, lhs, rhs
+      when :'||'; RBX::AST::OpAssignOr.new line, lhs, rhs
+      else;
+        nil
+      end
+      # RBX::AST::OpAssign2.new line, lhs, rhs
     end
-    
-    send = RBX::AST::SendWithArguments.new line, lhs, name, rhs
-    
-    RBX::AST::LocalVariableAssignment.new line, lhs.name, send
     
     # case lhs.type
     # when :gvasgn, :ivasgn, :lvasgn, :cvasgn, :casgn, :send
@@ -1060,7 +1080,7 @@ private
 end
 
 
-# class RBX::AST::FormalArguments19
+# class RBX::AST::OpAssign1
 #   class << self
 #     deco :new do |*args|
 #       p args
