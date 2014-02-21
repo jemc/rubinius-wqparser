@@ -489,16 +489,23 @@ class RubiniusBuilder < Parser::Builders::Default
     post     = args.detect { |type, arg| type == :post     }; post  = post .last if post
     block    = args.detect { |type, arg| type == :block    }; block = block.last if block
     
-    RBX::AST::FormalArguments19.new line, required, nil, splat, post, block
+    if optional.empty?
+      optional = nil
+    else
+      optional.map! { |a| RBX::AST::LocalVariableAssignment.new *a }
+      optional = RBX::AST::Block.new line, optional
+    end
+    
+    RBX::AST::FormalArguments19.new line, required, optional, splat, post, block
   end
 
   def arg(token)
     [:required, value(token).to_sym]
   end
 
-  # def optarg(token)
-  #   [:optional, value(token).to_sym]
-  # end
+  def optarg(name_t, eql_t, value)
+    [:optional, [line(eql_t), value(name_t).to_sym, value]]
+  end
 
   # def optarg(name_t, eql_t, value)
   #   n(:optarg, [ value(name_t).to_sym, value ],
@@ -1053,16 +1060,11 @@ private
 end
 
 
-# class RBX::AST::ElementAssignment
+# class RBX::AST::FormalArguments19
 #   class << self
 #     deco :new do |*args|
-#     # def to_sexp
 #       p args
-#       args.shift
-#       p args.map &:to_sexp
-#       # p args
-#       # p @arguments
-#       deco_super *[1, *args]
+#       deco_super *args
 #     end
 #   end
 # end
