@@ -1,0 +1,2 @@
+fails:A Lit node is parsed from '2i'
+fails:A Lit node is parsed from '3+2i'

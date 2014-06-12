@@ -1,0 +1,2 @@
+fails:An Or node is parsed from '((a || b) || (c && d))'
+fails:An Or node is parsed from '((a or b) or (c and d))'

@@ -60,18 +60,21 @@ describe "A While node" do
 
   parse <<-ruby do
       while 1
-        2
+        a = 2
         break :brk
       end
     ruby
 
-    [:while, [:lit, 1], [:block, [:lit, 2], [:break, [:lit, :brk]]], true]
+    [:while,
+     [:lit, 1],
+     [:block, [:lasgn, :a, [:lit, 2]], [:break, [:lit, :brk]]],
+     true]
   end
 
   parse <<-ruby do
       while 1
         begin
-          2
+          a = 2
           break :brk
         rescue
           3
@@ -82,7 +85,7 @@ describe "A While node" do
     [:while,
      [:lit, 1],
      [:rescue,
-      [:block, [:lit, 2], [:break, [:lit, :brk]]],
+      [:block, [:lasgn, :a, [:lit, 2]], [:break, [:lit, :brk]]],
       [:resbody, [:array, [:const, :StandardError]], [:lit, 3]]],
      true]
   end
@@ -92,7 +95,7 @@ describe "A While node" do
         begin
           2
         rescue
-          3
+          a = 3
           break :brk
         end
       end
@@ -104,7 +107,7 @@ describe "A While node" do
       [:lit, 2],
       [:resbody,
        [:array, [:const, :StandardError]],
-       [[:lit, 3], [:break, [:lit, :brk]]]]],
+       [[:lasgn, :a ,[:lit, 3]], [:break, [:lit, :brk]]]]],
      true]
   end
 end

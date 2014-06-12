@@ -1,0 +1,4 @@
+fails:"A Hash node is parsed from \n    { **{ a: 1, b: 2 }, b: 2 }"
+fails:"A Hash node is parsed from \n    { a: 1, **{ b: 2 }, c: 3 }"
+fails:"A Hash node is parsed from \n    h = { a: 1 }\n    { b: 2, **h }"
+fails:"A Hash node is parsed from \n    { a: 1, **h, c: 3 }"

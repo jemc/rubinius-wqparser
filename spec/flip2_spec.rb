@@ -1,6 +1,6 @@
 describe "A Flip2 node" do
   parse <<-ruby do
-      x = if ((i % 4) == 0)..((i % 3) == 0) then
+      x = if ((i % 4) == 0)..((i % 3) == 0)
         i
       else
         nil
@@ -24,7 +24,7 @@ describe "A Flip2 node" do
   end
 
   parse <<-ruby do
-      if 1..2.a?(b) then
+      if 1..2.a?(b)
         nil
       end
     ruby
@@ -33,6 +33,42 @@ describe "A Flip2 node" do
      [:flip2,
       [:lit, 1],
       [:call, [:lit, 2], :a?, [:arglist, [:call, nil, :b, [:arglist]]]]],
+     [:nil],
+     nil]
+  end
+
+  parse <<-ruby do
+      x, y = 1, 2
+      if x..y.a?(b)
+        nil
+      end
+    ruby
+
+    [:block,
+     [:masgn,
+      [:array, [:lasgn, :x], [:lasgn, :y]],
+      [:array, [:lit, 1], [:lit, 2]]],
+     [:if,
+      [:flip2,
+       [:lvar, :x],
+       [:call, [:lvar, :y], :a?, [:arglist, [:call, nil, :b, [:arglist]]]]],
+      [:nil],
+      nil]]
+  end
+
+  parse <<-ruby do
+      if x..y.a?(b)
+        nil
+      end
+    ruby
+
+    [:if,
+     [:flip2,
+      [:call, nil, :x, [:arglist]],
+      [:call,
+       [:call, nil, :y, [:arglist]],
+       :a?,
+       [:arglist, [:call, nil, :b, [:arglist]]]]],
      [:nil],
      nil]
   end

@@ -11,151 +11,476 @@ describe "An Iter node" do
     [:call, nil, :m, [:arglist, [:iter, [:args], [:call, nil, :x, [:arglist]]]]]
   end
 
-  parse "m { || x }" do
-    [:call, nil, :m, [:arglist, [:iter, [:args], [:call, nil, :x, [:arglist]]]]]
+  parse "m { || }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args], [:nil]]]]
   end
 
-  parse "m { |a| a + x }" do
+  parse "m { |; x| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args], [:nil]]]]
+  end
+
+  parse "m { |; x, y| x - y + z }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args], [:block, [[:lvar, :x], [:lvar, :y]]]]]]
+  end
+
+  parse "m { |a| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a], [:nil]]]]
+  end
+
+  parse "m { |a, (b, c)| }" do
     [:call,
      nil,
      :m,
      [:arglist,
       [:iter,
-       [:args, :a],
-       [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]]]]]
+       [:args, :a, [:masgn, [:array, [:lasgn, :b], [:lasgn, :c]]]],
+       [:nil]]]]
   end
 
-  parse "m { |*| x }" do
+  parse "m { |a; x| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a], [:block, [[:lvar, :x]]]]]]
+  end
+
+  parse "m { |a=1| }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :*], [:call, nil, :x, [:arglist]]]]]
+     [:arglist, [:iter, [:args, :a, [:block, [:lasgn, :a, [:lit, 1]]]], [:nil]]]]
   end
 
-  parse "m { |*c| x; c }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:iter,
-       [:args, :"*c"],
-       [:block, [:call, nil, :x, [:arglist]], [:lvar, :c]]]]]
-  end
-
-  parse "m { |a, | a + x }" do
+  parse "m { |a=1, (b, (c, *d), *e)| }" do
     [:call,
      nil,
      :m,
      [:arglist,
       [:iter,
-       [:args, :a],
-       [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]]]]]
+       [:args,
+        :a,
+        [:masgn,
+         [:array,
+          [:lasgn, :b],
+          [:masgn, [:array, [:lasgn, :c], [:splat, [:lasgn, :d]]]],
+          [:splat, [:lasgn, :e]]]],
+        [:block, [:lasgn, :a, [:lit, 1]]]],
+       [:nil]]]]
   end
 
-  parse "m { |a, *| a + x }" do
+  parse "m { |a=1; x| }" do
     [:call,
      nil,
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :*],
-       [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]]]]]
+       [:args, :a, [:block, [:lasgn, :a, [:lit, 1]]]],
+       [:block, [[:lvar, :x]]]]]]
   end
 
-  parse "m { |a, *c| a + x; c }" do
+  parse "m { |*| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :*], [:nil]]]]
+  end
+
+  parse "m { |*; x| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :*], [:block, [[:lvar, :x]]]]]]
+  end
+
+  parse "m { |*a| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :"*a"], [:nil]]]]
+  end
+
+  parse "m { |*a; x| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :"*a"], [:block, [[:lvar, :x]]]]]]
+  end
+
+  parse "m { |a:| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a, [:block, [:a]]], [:nil]]]]
+  end
+
+  parse "m { |a:; x| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :a, [:block, [:a]]], [:block, [[:lvar, :x]]]]]]
+  end
+
+  parse "m { |a: 1| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter, [:args, :a, [:block, [:a], [[:lasgn, :a, [:lit, 1]]]]], [:nil]]]]
+  end
+
+  parse "m { |a: 1; x| }" do
     [:call,
      nil,
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :"*c"],
-       [:block,
-        [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]],
-        [:lvar, :c]]]]]
+       [:args, :a, [:block, [:a], [[:lasgn, :a, [:lit, 1]]]]],
+       [:block, [[:lvar, :x]]]]]]
   end
 
-  parse "m { |a, b| a + x; b }" do
+  parse "m { |**| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :**, [:block, [:**]]], [:nil]]]]
+  end
+
+  parse "m { |**; x| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :**, [:block, [:**]]], [:block, [[:lvar, :x]]]]]]
+  end
+
+  parse "m { |**k| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :"**k", [:block, [:"**k"]]], [:nil]]]]
+  end
+
+  parse "m { |**k; x| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter, [:args, :"**k", [:block, [:"**k"]]], [:block, [[:lvar, :x]]]]]]
+  end
+
+  parse "m { |&b| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :"&b"], [:nil]]]]
+  end
+
+  parse "m { |&b; x| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :"&b"], [:block, [[:lvar, :x]]]]]]
+  end
+
+  parse "m { |a, | }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a, :*], [:nil]]]]
+  end
+
+  parse "m { |a,; x| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a, :*], [:block, [[:lvar, :x]]]]]]
+  end
+
+  parse "m { |a, b| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a, :b], [:nil]]]]
+  end
+
+  parse "m { |a, b; x| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a, :b], [:block, [[:lvar, :x]]]]]]
+  end
+
+  parse "m { |a, b=1| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter, [:args, :a, :b, [:block, [:lasgn, :b, [:lit, 1]]]], [:nil]]]]
+  end
+
+  parse "m { |a, *| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a, :*], [:nil]]]]
+  end
+
+  parse "m { |a, *b| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a, :"*b"], [:nil]]]]
+  end
+
+  parse "m { |a, b:| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a, :b, [:block, [:b]]], [:nil]]]]
+  end
+
+  parse "m { |a, b: 1| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter, [:args, :a, :b, [:block, [:b], [[:lasgn, :b, [:lit, 1]]]]], [:nil]]]]
+  end
+
+  parse "m { |a, **| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :a, :**, [:block, [:**]]], [:nil]]]]
+  end
+
+  parse "m { |a, **k| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :a, :"**k", [:block, [:"**k"]]], [:nil]]]]
+  end
+
+  parse "m { |a, &b| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a, :"&b"], [:nil]]]]
+  end
+
+  parse "m { |a=1, b=2| }" do
     [:call,
      nil,
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :b],
-       [:block,
-        [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]],
-        [:lvar, :b]]]]]
+       [:args, :a, :b, [:block, [:lasgn, :a, [:lit, 1]], [:lasgn, :b, [:lit, 2]]]],
+       [:nil]]]]
   end
 
-  parse "m { |a, b, | a + x; b }" do
+  parse "m { |a=1, b| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter, [:args, :a, :b, [:block, [:lasgn, :a, [:lit, 1]]]], [:nil]]]]
+  end
+
+  parse "m { |a=1, *| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter, [:args, :a, :*, [:block, [:lasgn, :a, [:lit, 1]]]], [:nil]]]]
+  end
+
+  parse "m { |a=1, *b| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter, [:args, :a, :"*b", [:block, [:lasgn, :a, [:lit, 1]]]], [:nil]]]]
+  end
+
+  parse "m { |a=1, b:| }" do
     [:call,
      nil,
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :b],
-       [:block,
-        [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]],
-        [:lvar, :b]]]]]
+       [:args, :a, :b, [:block, [:lasgn, :a, [:lit, 1]]], [:block, [:b]]],
+       [:nil]]]]
   end
 
-  parse "m { |a, b, *| a + x; b }" do
+  parse "m { |a=1, b: 2| }" do
     [:call,
      nil,
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :b, :*],
-       [:block,
-        [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]],
-        [:lvar, :b]]]]]
+       [:args,
+        :a,
+        :b,
+        [:block, [:lasgn, :a, [:lit, 1]]],
+        [:block, [:b], [[:lasgn, :b, [:lit, 2]]]]],
+       [:nil]]]]
   end
 
-  masgn_rest_arg_block = lambda do |g|
-    g.push :self
-
-    g.in_block_send :m, :rest, -3 do |d|
-      d.push_local 0
-      d.push :self
-      d.send :x, 0, true
-      d.send :+, 1, false
-      d.pop
-      d.push_local 1
-      d.pop
-      d.push_local 2
-    end
-  end
-
-  parse "m { |a, b, *c| a + x; b; c }" do
+  parse "m { |a=1, **| }" do
     [:call,
      nil,
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :b, :"*c"],
-       [:block,
-        [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]],
-        [:lvar, :b],
-        [:lvar, :c]]]]]
+       [:args, :a, :**, [:block, [:lasgn, :a, [:lit, 1]]], [:block, [:**]]],
+       [:nil]]]]
   end
 
-  parse "m do |a, b, *c| a + x; b; c end" do
+  parse "m { |a=1, **k| }" do
     [:call,
      nil,
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :b, :"*c"],
-       [:block,
-        [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]],
-        [:lvar, :b],
-        [:lvar, :c]]]]]
+       [:args, :a, :"**k", [:block, [:lasgn, :a, [:lit, 1]]], [:block, [:"**k"]]],
+       [:nil]]]]
   end
 
-  parse "m { n = 1; n }" do
+  parse "m { |a=1, &b| }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args], [:block, [:lasgn, :n, [:lit, 1]], [:lvar, :n]]]]]
+     [:arglist,
+      [:iter, [:args, :a, :"&b", [:block, [:lasgn, :a, [:lit, 1]]]], [:nil]]]]
+  end
+
+  parse "m { |*, a| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :*, :a], [:nil]]]]
+  end
+
+  parse "m { |*a, b| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :"*a", :b], [:nil]]]]
+  end
+
+  parse "m { |*, a:| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :*, :a, [:block, [:a]]], [:nil]]]]
+  end
+
+  parse "m { |*a, b:| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :"*a", :b, [:block, [:b]]], [:nil]]]]
+  end
+
+  parse "m { |*, a: 1| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter, [:args, :*, :a, [:block, [:a], [[:lasgn, :a, [:lit, 1]]]]], [:nil]]]]
+  end
+
+  parse "m { |*a, b: 1| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter,
+       [:args, :"*a", :b, [:block, [:b], [[:lasgn, :b, [:lit, 1]]]]],
+       [:nil]]]]
+  end
+
+  parse "m { |*, **| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :*, :**, [:block, [:**]]], [:nil]]]]
+  end
+
+  parse "m { |*a, **| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :"*a", :**, [:block, [:**]]], [:nil]]]]
+  end
+
+  parse "m { |*, **k| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :*, :"**k", [:block, [:"**k"]]], [:nil]]]]
+  end
+
+  parse "m { |*a, **k| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :"*a", :"**k", [:block, [:"**k"]]], [:nil]]]]
+  end
+
+  parse "m { |*, &b| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :*, :"&b"], [:nil]]]]
+  end
+
+  parse "m { |*a, &b| }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args, :"*a", :"&b"], [:nil]]]]
+  end
+
+  parse "m { |a:, b:| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :a, :b, [:block, [:a, :b]]], [:nil]]]]
+  end
+
+  parse "m { |a:, b: 1| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter,
+       [:args, :a, :b, [:block, [:a, :b], [[:lasgn, :b, [:lit, 1]]]]],
+       [:nil]]]]
+  end
+
+  parse "m { |a:, **| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :a, :**, [:block, [:a, :**]]], [:nil]]]]
+  end
+
+  parse "m { |a:, **k| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :a, :"**k", [:block, [:a, :"**k"]]], [:nil]]]]
+  end
+
+  parse "m { |a:, &b| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :a, :"&b", [:block, [:a]]], [:nil]]]]
+  end
+
+  parse "m { |a: 1, b:| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter,
+       [:args, :a, :b, [:block, [:a, :b], [[:lasgn, :a, [:lit, 1]]]]],
+       [:nil]]]]
+  end
+
+  parse "m { |a: 1, b: 2| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter,
+       [:args,
+        :a,
+        :b,
+        [:block, [:a, :b], [[:lasgn, :a, [:lit, 1]], [:lasgn, :b, [:lit, 2]]]]],
+       [:nil]]]]
+  end
+
+  parse "m { |a: 1, **| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter,
+       [:args, :a, :**, [:block, [:a, :**], [[:lasgn, :a, [:lit, 1]]]]],
+       [:nil]]]]
+  end
+
+  parse "m { |a: 1, **k| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter,
+       [:args, :a, :"**k", [:block, [:a, :"**k"], [[:lasgn, :a, [:lit, 1]]]]],
+       [:nil]]]]
+  end
+
+  parse "m { |a: 1, &b| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist,
+      [:iter,
+       [:args, :a, :"&b", [:block, [:a], [[:lasgn, :a, [:lit, 1]]]]],
+       [:nil]]]]
+  end
+
+  parse "m { |**, &b| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :**, :"&b", [:block, [:**]]], [:nil]]]]
+  end
+
+  parse "m { |**k, &b| }" do
+    [:call,
+     nil,
+     :m,
+     [:arglist, [:iter, [:args, :"**k", :"&b", [:block, [:"**k"]]], [:nil]]]]
   end
 
   parse "m { n = 1; m { n } }" do
@@ -170,148 +495,97 @@ describe "An Iter node" do
         [:call, nil, :m, [:arglist, [:iter, [:args], [:lvar, :n]]]]]]]]
   end
 
-  parse "n = 1; m { n = 2 }; n" do
-    [:block,
-     [:lasgn, :n, [:lit, 1]],
-     [:call, nil, :m, [:arglist, [:iter, [:args], [:lasgn, :n, [:lit, 2]]]]],
-     [:lvar, :n]]
-  end
-
-  parse "m(a) { |b| a + x }" do
+  parse "m(x) { |a, b=1, *c, d, e:, f: 2, **k, &l| }" do
     [:call,
      nil,
-     :m,
-     [:arglist,
-      [:call, nil, :a, [:arglist]],
-      [:iter,
-       [:args, :b],
-       [:call,
-        [:call, nil, :a, [:arglist]],
-        :+,
-        [:arglist, [:call, nil, :x, [:arglist]]]]]]]
-  end
-
-  parse <<-ruby do
-      m { |a|
-        a + x
-      }
-    ruby
-
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:iter,
-       [:args, :a],
-       [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]]]]]
-  end
-
-  parse <<-ruby do
-      m do |a|
-        a + x
-      end
-    ruby
-
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:iter,
-       [:args, :a],
-       [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]]]]]
-  end
-
-  parse "obj.m { |a| a + x }" do
-    [:call,
-     [:call, nil, :obj, [:arglist]],
-     :m,
-     [:arglist,
-      [:iter,
-       [:args, :a],
-       [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]]]]]
-  end
-
-  parse "obj.m(x) { |a| a + x }" do
-    [:call,
-     [:call, nil, :obj, [:arglist]],
      :m,
      [:arglist,
       [:call, nil, :x, [:arglist]],
       [:iter,
-       [:args, :a],
-       [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]]]]]
+       [:args,
+        :a,
+        :b,
+        :"*c",
+        :d,
+        :e,
+        :f,
+        :"**k",
+        :"&l",
+        [:block, [:lasgn, :b, [:lit, 1]]],
+        [:block, [:e, :f, :"**k"], [[:lasgn, :f, [:lit, 2]]]]],
+       [:nil]]]]
   end
 
-  parse "obj.m(a) { |a| a + x }" do
+  parse "m(x, y) { |a, b=1, *c, d, e:, f: 2, **k, &l| }" do
     [:call,
-     [:call, nil, :obj, [:arglist]],
+     nil,
      :m,
      [:arglist,
-      [:call, nil, :a, [:arglist]],
+      [:call, nil, :x, [:arglist]],
+      [:call, nil, :y, [:arglist]],
       [:iter,
-       [:args, :a],
-       [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]]]]]
+       [:args,
+        :a,
+        :b,
+        :"*c",
+        :d,
+        :e,
+        :f,
+        :"**k",
+        :"&l",
+        [:block, [:lasgn, :b, [:lit, 1]]],
+        [:block, [:e, :f, :"**k"], [[:lasgn, :f, [:lit, 2]]]]],
+       [:nil]]]]
   end
 
-  parse "a = 1; m { |a| a + x }" do
-    [:block,
-     [:lasgn, :a, [:lit, 1]],
-     [:call,
-      nil,
-      :m,
-      [:arglist,
-       [:iter,
-        [:args, :a],
-        [:call, [:lvar, :a], :+, [:arglist, [:call, nil, :x, [:arglist]]]]]]]]
+  parse "x.m { |a, b=1, *c, d, e:, f: 2, **k, &l| }" do
+    [:call,
+     [:call, nil, :x, [:arglist]],
+     :m,
+     [:arglist,
+      [:iter,
+       [:args,
+        :a,
+        :b,
+        :"*c",
+        :d,
+        :e,
+        :f,
+        :"**k",
+        :"&l",
+        [:block, [:lasgn, :b, [:lit, 1]]],
+        [:block, [:e, :f, :"**k"], [[:lasgn, :f, [:lit, 2]]]]],
+       [:nil]]]]
   end
 
-  parse <<-ruby do
-      x = nil
-      m do |a|
-        begin
-          x
-        rescue Exception => x
-          break
-        ensure
-          x = a
-        end
-      end
-    ruby
-
-    [:block,
-     [:lasgn, :x, [:nil]],
-     [:call,
-      nil,
-      :m,
-      [:arglist,
-       [:iter,
-        [:args, :a],
-        [:ensure,
-         [:rescue,
-          [:lvar, :x],
-          [:resbody,
-           [:array, [:const, :Exception], [:lasgn, :x, [:gvar, :$!]]],
-           [:break, [:nil]]]],
-         [:lasgn, :x, [:lvar, :a]]]]]]]
+  parse "x.m(x, y) { |a, b=1, *c, d, e:, f: 2, **k, &l| }" do
+    [:call,
+     [:call, nil, :x, [:arglist]],
+     :m,
+     [:arglist,
+      [:call, nil, :x, [:arglist]],
+      [:call, nil, :y, [:arglist]],
+      [:iter,
+       [:args,
+        :a,
+        :b,
+        :"*c",
+        :d,
+        :e,
+        :f,
+        :"**k",
+        :"&l",
+        [:block, [:lasgn, :b, [:lit, 1]]],
+        [:block, [:e, :f, :"**k"], [[:lasgn, :f, [:lit, 2]]]]],
+       [:nil]]]]
   end
 
   parse "m { next }" do
     [:call, nil, :m, [:arglist, [:iter, [:args], [:next]]]]
   end
 
-  parse "m { next if x }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:iter, [:args], [:if, [:call, nil, :x, [:arglist]], [:next], nil]]]]
-  end
-
-  parse "m { next x }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist, [:iter, [:args], [:next, [:call, nil, :x, [:arglist]]]]]]
+  parse "m { next 1 }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args], [:next, [:lit, 1]]]]]
   end
 
   parse "m { x = 1; next x }" do
@@ -322,52 +596,15 @@ describe "An Iter node" do
       [:iter, [:args], [:block, [:lasgn, :x, [:lit, 1]], [:next, [:lvar, :x]]]]]]
   end
 
-  parse "m { next [1] }" do
-    [:call, nil, :m, [:arglist, [:iter, [:args], [:next, [:array, [:lit, 1]]]]]]
-  end
-
-  parse "m { next *[1] }" do
+  parse "m { next *x }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args], [:next, [:splat, [:array, [:lit, 1]]]]]]]
-  end
-
-  parse "m { next [*[1]] }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist, [:iter, [:args], [:next, [:splat, [:array, [:lit, 1]]]]]]]
-  end
-
-  parse "m { next *[1, 2] }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:iter, [:args], [:next, [:splat, [:array, [:lit, 1], [:lit, 2]]]]]]]
-  end
-
-  parse "m { next [*[1, 2]] }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:iter, [:args], [:next, [:splat, [:array, [:lit, 1], [:lit, 2]]]]]]]
+     [:arglist, [:iter, [:args], [:next, [:splat, [:call, nil, :x, [:arglist]]]]]]]
   end
 
   parse "m { break }" do
     [:call, nil, :m, [:arglist, [:iter, [:args], [:break, [:nil]]]]]
-  end
-
-  parse "m { break if x }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:iter,
-       [:args],
-       [:if, [:call, nil, :x, [:arglist]], [:break, [:nil]], nil]]]]
   end
 
   parse "m { break x }" do
@@ -377,58 +614,8 @@ describe "An Iter node" do
      [:arglist, [:iter, [:args], [:break, [:call, nil, :x, [:arglist]]]]]]
   end
 
-  parse "m { x = 1; break x }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:iter, [:args], [:block, [:lasgn, :x, [:lit, 1]], [:break, [:lvar, :x]]]]]]
-  end
-
-  parse "m { break [1] }" do
-    [:call, nil, :m, [:arglist, [:iter, [:args], [:break, [:array, [:lit, 1]]]]]]
-  end
-
-  parse "m { break *[1] }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist, [:iter, [:args], [:break, [:splat, [:array, [:lit, 1]]]]]]]
-  end
-
-  parse "m { break [*[1]] }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist, [:iter, [:args], [:break, [:splat, [:array, [:lit, 1]]]]]]]
-  end
-
-  parse "m { break *[1, 2] }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:iter, [:args], [:break, [:splat, [:array, [:lit, 1], [:lit, 2]]]]]]]
-  end
-
-  parse "m { break [*[1, 2]] }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:iter, [:args], [:break, [:splat, [:array, [:lit, 1], [:lit, 2]]]]]]]
-  end
-
   parse "m { return }" do
     [:call, nil, :m, [:arglist, [:iter, [:args], [:return]]]]
-  end
-
-  parse "m { return if x }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:iter, [:args], [:if, [:call, nil, :x, [:arglist]], [:return], nil]]]]
   end
 
   parse "m { return x }" do
@@ -446,66 +633,12 @@ describe "An Iter node" do
       [:iter, [:args], [:block, [:lasgn, :x, [:lit, 1]], [:return, [:lvar, :x]]]]]]
   end
 
-  parse "m { return [1] }" do
-    [:call, nil, :m, [:arglist, [:iter, [:args], [:return, [:array, [:lit, 1]]]]]]
-  end
-
-  parse "m { return *[1] }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist, [:iter, [:args], [:return, [:splat, [:array, [:lit, 1]]]]]]]
-  end
-
-  parse "m { return [*[1]] }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist, [:iter, [:args], [:return, [:splat, [:array, [:lit, 1]]]]]]]
-  end
-
-  parse "m { return *[1, 2] }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:iter, [:args], [:return, [:splat, [:array, [:lit, 1], [:lit, 2]]]]]]]
-  end
-
-  parse "m { return [*[1, 2]] }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:iter, [:args], [:return, [:splat, [:array, [:lit, 1], [:lit, 2]]]]]]]
-  end
-
   parse "m { redo }" do
     [:call, nil, :m, [:arglist, [:iter, [:args], [:redo]]]]
   end
 
-  parse "m { redo if x }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:iter, [:args], [:if, [:call, nil, :x, [:arglist]], [:redo], nil]]]]
-  end
-
-  parse "m(a) { retry }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist, [:call, nil, :a, [:arglist]], [:iter, [:args], [:retry]]]]
-  end
-
-  parse "m(a) { retry if x }" do
-    [:call,
-     nil,
-     :m,
-     [:arglist,
-      [:call, nil, :a, [:arglist]],
-      [:iter, [:args], [:if, [:call, nil, :x, [:arglist]], [:retry], nil]]]]
+  parse "m { retry }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args], [:retry]]]]
   end
 
   parse "break" do
@@ -524,16 +657,7 @@ describe "An Iter node" do
     [:next]
   end
 
-  parse <<-ruby do
-      def x(a)
-        bar { super }
-      end
-    ruby
-
-    [:defn,
-     :x,
-     [:args, :a],
-     [:scope,
-      [:block, [:call, nil, :bar, [:arglist, [:iter, [:args], [:zsuper]]]]]]]
+  parse "m { super }" do
+    [:call, nil, :m, [:arglist, [:iter, [:args], [:zsuper]]]]
   end
 end

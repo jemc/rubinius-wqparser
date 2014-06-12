@@ -1,73 +1,95 @@
 describe "A Defs node" do
   parse <<-ruby do
-      def self.x(y)
-        (y + 1)
-      end
+      def self.m() end
+    ruby
+
+    [:defs, [:self], :m, [:args], [:scope, [:block, [:nil]]]]
+  end
+
+  parse <<-ruby do
+      a = ""
+      def a.m() end
+    ruby
+
+    [:block,
+     [:lasgn, :a, [:str, ""]],
+     [:defs, [:lvar, :a], :m, [:args], [:scope, [:block, [:nil]]]]]
+  end
+
+  parse <<-ruby do
+      a = ""
+      def (a.b).m() end
+    ruby
+
+    [:block,
+     [:lasgn, :a, [:str, ""]],
+     [:defs,
+      [:call, [:lvar, :a], :b, [:arglist]],
+      :m,
+      [:args],
+      [:scope, [:block, [:nil]]]]]
+  end
+
+  parse <<-ruby do
+      def x.m(a=1, (b, (c, *d), *e)) end
     ruby
 
     [:defs,
-       [:self],
-       :x,
-       [:args, :y],
-       [:scope, [:block, [:call, [:lvar, :y], :+, [:arglist, [:lit, 1]]]]]]
-  end
-
-  parse <<-ruby do
-      def self.setup(ctx)
-        bind = allocate
-        bind.context = ctx
-        return bind
-      end
-    ruby
-
-    [:defs,
-       [:self],
-       :setup,
-       [:args, :ctx],
-       [:scope,
-        [:block,
-         [:lasgn, :bind, [:call, nil, :allocate, [:arglist]]],
-         [:attrasgn, [:lvar, :bind], :context=, [:arglist, [:lvar, :ctx]]],
-         [:return, [:lvar, :bind]]]]]
-  end
-
-  parse <<-ruby do
-      def self.empty(*)
-      end
-    ruby
-
-    [:defs, [:self], :empty, [:args, :*], [:scope, [:block, [:nil]]]]
-  end
-
-  parse <<-ruby do
-      def self.empty
-      end
-    ruby
-
-    [:defs, [:self], :empty, [:args], [:scope, [:block, [:nil]]]]
-  end
-
-  parse <<-ruby do
-      def (a.b).empty(*)
-      end
-    ruby
-
-    [:defs,
-     [:call, [:call, nil, :a, [:arglist]], :b, [:arglist]],
-     :empty,
-     [:args, :*],
+     [:call, nil, :x, [:arglist]],
+     :m,
+     [:args,
+      :a,
+      [:masgn,
+       [:array,
+        [:lasgn, :b],
+        [:masgn, [:array, [:lasgn, :c], [:splat, [:lasgn, :d]]]],
+        [:splat, [:lasgn, :e]]]],
+      [:block, [:lasgn, :a, [:lit, 1]]]],
      [:scope, [:block, [:nil]]]]
   end
 
   parse <<-ruby do
-    x = "a"
-    def x.m(a)
-      a
-    end
+      def x.m(a, b=1, *c, d, e:, f: 2, g:, **k, &l) end
     ruby
 
-    [:block,
-     [:lasgn, :x, [:str, "a"]],
-     [:defs, [:lvar, :x], :m, [:args, :a], [:scope, [:block, [:lvar, :a]]]]]
+    [:defs,
+     [:call, nil, :x, [:arglist]],
+     :m,
+     [:args,
+      :a,
+      :b,
+      :"*c",
+      :d,
+      :e,
+      :f,
+      :g,
+      :"**k",
+      :"&l",
+      [:block, [:lasgn, :b, [:lit, 1]]],
+      [:block, [:e, :f, :g, :"**k"], [[:lasgn, :f, [:lit, 2]]]]],
+     [:scope, [:block, [:nil]]]]
+  end
+
+  parse <<-ruby do
+      def x.m a, b=1, *c, d, e:, f: 2, g:, **k, &l
+      end
+    ruby
+
+    [:defs,
+     [:call, nil, :x, [:arglist]],
+     :m,
+     [:args,
+      :a,
+      :b,
+      :"*c",
+      :d,
+      :e,
+      :f,
+      :g,
+      :"**k",
+      :"&l",
+      [:block, [:lasgn, :b, [:lit, 1]]],
+      [:block, [:e, :f, :g, :"**k"], [[:lasgn, :f, [:lit, 2]]]]],
+     [:scope, [:block, [:nil]]]]
   end
 end

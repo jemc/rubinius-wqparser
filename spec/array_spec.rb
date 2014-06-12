@@ -23,6 +23,26 @@ describe "An Array node" do
       [:str, "c"]]
   end
 
+  parse "%i[a b c]" do
+    [:array, [:lit, :a], [:lit, :b], [:lit, :c]]
+  end
+
+  parse '%i[a #{@b} c]' do
+    [:array, [:lit, :a], [:lit, :"\#{@b}"], [:lit, :c]]
+  end
+
+  parse "%I[a b c]" do
+    [:array,
+      [:dsym, "a"], [:dsym, "b"], [:dsym, "c"]]
+  end
+
+  parse '%I[a #{@b} c]' do
+    [:array,
+      [:dsym, "a"],
+      [:dsym, "", [:evstr, [:ivar, :@b]]],
+      [:dsym, "c"]]
+  end
+
   parse "[*[1]]" do
     [:splat, [:array, [:lit, 1]]]
   end

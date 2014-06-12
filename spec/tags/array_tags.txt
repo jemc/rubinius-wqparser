@@ -1,0 +1,4 @@
+fails:An Array node is parsed from '%i[a b c]'
+fails:An Array node is parsed from '%i[a #{@b} c]'
+fails:An Array node is parsed from '%I[a b c]'
+fails:An Array node is parsed from '%I[a #{@b} c]'

@@ -8,7 +8,7 @@ require 'rubinius/ast'
 
 require 'parser/current'
 
-RBX = Rubinius::ToolSet.current::TS
+RBX = Rubinius::ToolSets.current
 
 # module RBX; end
 # module RBX::AST; end

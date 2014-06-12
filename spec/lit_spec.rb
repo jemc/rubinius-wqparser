@@ -27,6 +27,22 @@ describe "A Lit node" do
     [:lit, 1]
   end
 
+  parse "3r" do
+    [:lit, (3/1)]
+  end
+
+  parse "1/3r" do
+    [:call, [:lit, 1], :/, [:arglist, [:lit, (3/1)]]]
+  end
+
+  parse "2i" do
+    # [:lit, (0+2i)]
+  end
+
+  parse "3+2i" do
+    # [:call, [:lit, 3], :+, [:arglist, [:lit, (0+2i)]]]
+  end
+
   parse "8000_0000" do
     [:lit, 80000000]
   end

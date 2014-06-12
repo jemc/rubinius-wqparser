@@ -318,7 +318,7 @@ describe "A Rescue node" do
   parse <<-ruby do
       begin
         while 1
-          2
+          a = 2
           break :brk
         end
       rescue
@@ -326,9 +326,12 @@ describe "A Rescue node" do
       end
     ruby
 
-  [:rescue,
-   [:while, [:lit, 1], [:block, [:lit, 2], [:break, [:lit, :brk]]], true],
-   [:resbody, [:array, [:const, :StandardError]], [:lit, 3]]]
+    [:rescue,
+     [:while,
+      [:lit, 1],
+      [:block, [:lasgn, :a, [:lit, 2]], [:break, [:lit, :brk]]],
+      true],
+     [:resbody, [:array, [:const, :StandardError]], [:lit, 3]]]
   end
 
   parse <<-ruby do
@@ -336,7 +339,7 @@ describe "A Rescue node" do
         1
       rescue
         while 2
-          3
+          a = 3
           break :brk
         end
       end
@@ -346,6 +349,9 @@ describe "A Rescue node" do
      [:lit, 1],
      [:resbody,
       [:array, [:const, :StandardError]],
-      [:while, [:lit, 2], [:block, [:lit, 3], [:break, [:lit, :brk]]], true]]]
+      [:while,
+       [:lit, 2],
+       [:block, [:lasgn, :a, [:lit, 3]], [:break, [:lit, :brk]]],
+       true]]]
   end
 end

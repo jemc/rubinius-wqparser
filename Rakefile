@@ -19,7 +19,8 @@ require "redcard"
 
 desc "Run the specs"
 task :spec => dependencies do
-  exec "mspec spec -G fails"
+  # exec "mspec spec -G fails"
+  sh "mspec -I #{File.dirname __FILE__} -r spec/spec_helper spec -G fails"
 end
 
 task :sandbox do

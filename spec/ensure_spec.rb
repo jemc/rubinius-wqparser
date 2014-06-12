@@ -60,20 +60,20 @@ describe "An Ensure node" do
 
   parse <<-ruby do
       begin
-        14
+        a = 14
         return 2
       ensure
         13
       end
     ruby
 
-    [:ensure, [:block, [:lit, 14], [:return, [:lit, 2]]], [:lit, 13]]
+    [:ensure, [:block, [:lasgn, :a, [:lit, 14]], [:return, [:lit, 2]]], [:lit, 13]]
   end
 
   parse <<-ruby do
       begin
         begin
-          14
+          a = 14
           return 2
         ensure
           13
@@ -84,17 +84,19 @@ describe "An Ensure node" do
     ruby
 
     [:ensure,
-     [:ensure, [:block, [:lit, 14], [:return, [:lit, 2]]], [:lit, 13]],
+     [:ensure,
+      [:block, [:lasgn, :a, [:lit, 14]], [:return, [:lit, 2]]],
+      [:lit, 13]],
      [:lit, 15]]
   end
 
   parse <<-ruby do
       begin
-        14
+        a = 14
         return 2
       ensure
         begin
-          15
+          b = 15
           return 3
         ensure
           16
@@ -103,7 +105,9 @@ describe "An Ensure node" do
     ruby
 
     [:ensure,
-      [:block, [:lit, 14], [:return, [:lit, 2]]],
-      [:ensure, [:block, [:lit, 15], [:return, [:lit, 3]]], [:lit, 16]]]
+     [:block, [:lasgn, :a, [:lit, 14]], [:return, [:lit, 2]]],
+     [:ensure,
+      [:block, [:lasgn, :b, [:lit, 15]], [:return, [:lit, 3]]],
+      [:lit, 16]]]
   end
 end

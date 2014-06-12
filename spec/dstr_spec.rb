@@ -52,8 +52,7 @@ describe "A Dstr node" do
     [:dstr,
      "",
      [:evstr, [:lit, 22]],
-     [:str, "aa"],
-     [:str, "cd"],
+     [:str, "aacd"],
      [:evstr, [:lit, 44]],
      [:str, "55"],
      [:evstr, [:lit, 66]]]

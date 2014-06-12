@@ -1,0 +1,1 @@
+fails:"A Flip2 node is parsed from \n    x, y = 1, 2\n    if x..y.a?(b)\n      nil\n    end"
