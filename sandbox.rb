@@ -201,22 +201,19 @@ class RubiniusBuilder < Parser::Builders::Default
     RBX::AST::ArrayLiteral.new line(begin_t), parts
   end
 
-  # def symbols_compose(begin_t, parts, end_t)
-  #   parts = parts.map do |part|
-  #     case part.type
-  #     when :str
-  #       value, = *part
-  #       part.updated(:sym, [ value.to_sym ])
-  #     when :dstr
-  #       part.updated(:dsym)
-  #     else
-  #       part
-  #     end
-  #   end
-
-  #   n(:array, [ *parts ],
-  #     collection_map(begin_t, parts, end_t))
-  # end
+  def symbols_compose(begin_t, parts, end_t)
+    parts = parts.map do |part|
+      if part.class == RBX::AST::StringLiteral
+        RBX::AST::DynamicSymbol.new part.line, part.string, []
+      elsif part.class == RBX::AST::DynamicString
+        RBX::AST::DynamicSymbol.new part.line, part.string, part.array
+      else
+        part
+      end
+    end
+    
+    RBX::AST::ArrayLiteral.new line(begin_t), parts
+  end
 
   # Hashes
 
@@ -1078,7 +1075,7 @@ private
   instance_methods.each do |sym|
     deco sym do |*args, &block|
       begin
-        # p [sym, *args]; puts
+        (p [sym, *args]; puts) if $SANDBOX_VERBOSE
         deco_super *args, &block
       rescue Exception=>e
         p sym

@@ -24,6 +24,8 @@ task :spec => dependencies do
 end
 
 task :sandbox do
+  $SANDBOX_VERBOSE = true
+  
   require_relative 'sandbox.rb'
   
   def parse str, &block
@@ -32,7 +34,6 @@ task :sandbox do
     puts "expect: #{block.call.inspect}"
     puts "actual: #{actual.inspect}"
   end
-  
 end
 
 task :default => :spec
