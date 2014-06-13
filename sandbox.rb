@@ -711,18 +711,23 @@ class RubiniusBuilder < Parser::Builders::Default
   #     ternary_map(cond, question_t, if_true, colon_t, if_false))
   # end
 
-  # # Case matching
+  # Case matching
 
-  # def when(when_t, patterns, then_t, body)
-  #   children = patterns << body
-  #   n(:when, children,
-  #     keyword_map(when_t, then_t, children, nil))
-  # end
+  def when(when_t, patterns, then_t, body)
+    patterns = RBX::AST::ArrayLiteral.new line(when_t), patterns
+    RBX::AST::When.new line(when_t), patterns, body
+  end
 
-  # def case(case_t, expr, when_bodies, else_t, else_body, end_t)
-  #   n(:case, [ expr, *(when_bodies << else_body)],
-  #     condition_map(case_t, expr, nil, nil, else_t, else_body, end_t))
-  # end
+  def case(case_t, expr, when_bodies, else_t, else_body, end_t)
+    else_body = RBX::AST::Begin.new else_body.line, else_body \
+      if else_body.is_a? RBX::AST::NilLiteral
+    
+    if expr.nil?
+      RBX::AST::Case.new line(case_t), when_bodies, else_body
+    else
+      RBX::AST::ReceiverCase.new line(case_t), expr, when_bodies, else_body
+    end
+  end
 
   # Loops
 
@@ -1075,7 +1080,7 @@ private
   instance_methods.each do |sym|
     deco sym do |*args, &block|
       begin
-        (p [sym, *args]; puts) if $SANDBOX_VERBOSE
+        (pp [sym, *args]; puts) if $SANDBOX_VERBOSE
         deco_super *args, &block
       rescue Exception=>e
         p sym
@@ -1090,10 +1095,11 @@ private
 end
 
 
-# class RBX::AST::OpAssign1
+# class RBX::AST::ReceiverCase
 #   class << self
 #     deco :new do |*args|
-#       p args
+#       p [:ReceiverCase_new, *args]
+#       puts args.last
 #       deco_super *args
 #     end
 #   end
