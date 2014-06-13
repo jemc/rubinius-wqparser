@@ -25,6 +25,14 @@ end
 
 task :sandbox do
   require_relative 'sandbox.rb'
+  
+  def parse str, &block
+    actual = str.to_sexp
+    puts "      : #{str}"
+    puts "expect: #{block.call.inspect}"
+    puts "actual: #{actual.inspect}"
+  end
+  
 end
 
 task :default => :spec

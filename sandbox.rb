@@ -389,15 +389,16 @@ class RubiniusBuilder < Parser::Builders::Default
       end
     else
       lhs = assignable(lhs)
-      rhs = convert_to_assignment(line, lhs, rhs)
+      rhs_asgn = convert_to_assignment(line, lhs, rhs)
       
       case name
-      when :'&&'; RBX::AST::OpAssignAnd.new line, lhs, rhs
-      when :'||'; RBX::AST::OpAssignOr.new line, lhs, rhs
+      when :'&&'; RBX::AST::OpAssignAnd.new line, lhs, rhs_asgn
+      when :'||'; RBX::AST::OpAssignOr.new line, lhs, rhs_asgn
       else;
-        nil
+        RBX::AST::LocalVariableAssignment.new(line, lhs.name,
+          RBX::AST::SendWithArguments.new(line, lhs, name, rhs)
+        )
       end
-      # RBX::AST::OpAssign2.new line, lhs, rhs
     end
     
     # case lhs.type
@@ -1077,7 +1078,7 @@ private
   instance_methods.each do |sym|
     deco sym do |*args, &block|
       begin
-        # p sym
+        # p [sym, *args]; puts
         deco_super *args, &block
       rescue Exception=>e
         p sym
@@ -1113,15 +1114,4 @@ class String
     # p node
     node.to_sexp
   end
-end
-
-class << Object.new
-  class << self
-    def parse str, &block
-      puts "      : #{str}"
-      puts "expect: #{block.call.inspect}"
-      puts "actual: #{str.to_sexp.inspect}"
-    end
-  end
-
 end

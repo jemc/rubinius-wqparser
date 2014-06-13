@@ -1,1 +1,0 @@
-fails:"A Str node is parsed from \n    a += <<-H1 + b + <<-H2\n      first\n    H1\n      second\n    H2"
