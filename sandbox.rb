@@ -974,10 +974,22 @@ private
         end
       end.flatten!
       
+      # Get first non-dynamic part (or '')
       first = parts.shift.string if parts.first.class == RBX::AST::StringLiteral
       first ||= ''
       
-      return [true, line, first, [*parts]]
+      # Join adjacent non-dynamic parts
+      clustered_parts = []
+      [*parts].each do |element|
+        if clustered_parts.last.class == RBX::AST::StringLiteral \
+        && element.class == RBX::AST::StringLiteral
+          clustered_parts.last.string += element.string
+        else
+          clustered_parts.push element
+        end
+      end
+      
+      return [true, line, first, clustered_parts]
     elsif parts.one?
       return [false, line, parts.first, []]
     else
