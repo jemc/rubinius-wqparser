@@ -419,15 +419,15 @@ class RubiniusBuilder < Parser::Builders::Default
     # end
   end
   
-  # def multi_lhs(begin_t, items, end_t)
-  #   n(:mlhs, [ *items ],
-  #     collection_map(begin_t, items, end_t))
-  # end
+  def multi_lhs(begin_t, items, end_t)
+    line = line(begin_t)
+    items = items.map { |item| convert_to_assignment line, item, nil }
+    RBX::AST::ArrayLiteral.new line(begin_t), items
+  end
   
-  # def multi_assign(lhs, eql_t, rhs)
-  #   n(:masgn, [ lhs, rhs ],
-  #     binary_op_map(lhs, eql_t, rhs))
-  # end
+  def multi_assign(lhs, eql_t, rhs)
+    RBX::AST::MultipleAssignment.new line(eql_t), lhs, rhs, nil
+  end
   
   #
   # Class and module definition
