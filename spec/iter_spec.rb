@@ -36,7 +36,9 @@ describe "An Iter node" do
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, [:masgn, [:array, [:lasgn, :b], [:lasgn, :c]]]],
+       [:args,
+        :a,
+        [:masgn, [:array, [:lasgn, :b], [:lasgn, :c]], [:lvar, :"_:1"]]],
        [:nil]]]]
   end
 
@@ -63,7 +65,8 @@ describe "An Iter node" do
          [:array,
           [:lasgn, :b],
           [:masgn, [:array, [:lasgn, :c], [:splat, [:lasgn, :d]]]],
-          [:splat, [:lasgn, :e]]]],
+          [:splat, [:lasgn, :e]]],
+         [:lvar, :"_:1"]],
         [:block, [:lasgn, :a, [:lit, 1]]]],
        [:nil]]]]
   end
@@ -95,14 +98,14 @@ describe "An Iter node" do
   end
 
   parse "m { |a:| }" do
-    [:call, nil, :m, [:arglist, [:iter, [:args, :a, [:block, [:a]]], [:nil]]]]
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a, [:kwargs, [:a]]], [:nil]]]]
   end
 
   parse "m { |a:; x| }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :a, [:block, [:a]]], [:block, [[:lvar, :x]]]]]]
+     [:arglist, [:iter, [:args, :a, [:kwargs, [:a]]], [:block, [[:lvar, :x]]]]]]
   end
 
   parse "m { |a: 1| }" do
@@ -110,7 +113,7 @@ describe "An Iter node" do
      nil,
      :m,
      [:arglist,
-      [:iter, [:args, :a, [:block, [:a], [[:lasgn, :a, [:lit, 1]]]]], [:nil]]]]
+      [:iter, [:args, :a, [:kwargs, [:a], [[:lasgn, :a, [:lit, 1]]]]], [:nil]]]]
   end
 
   parse "m { |a: 1; x| }" do
@@ -119,26 +122,26 @@ describe "An Iter node" do
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, [:block, [:a], [[:lasgn, :a, [:lit, 1]]]]],
+       [:args, :a, [:kwargs, [:a], [[:lasgn, :a, [:lit, 1]]]]],
        [:block, [[:lvar, :x]]]]]]
   end
 
   parse "m { |**| }" do
-    [:call, nil, :m, [:arglist, [:iter, [:args, :**, [:block, [:**]]], [:nil]]]]
+    [:call, nil, :m, [:arglist, [:iter, [:args, :**, [:kwargs, [:**]]], [:nil]]]]
   end
 
   parse "m { |**; x| }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :**, [:block, [:**]]], [:block, [[:lvar, :x]]]]]]
+     [:arglist, [:iter, [:args, :**, [:kwargs, [:**]]], [:block, [[:lvar, :x]]]]]]
   end
 
   parse "m { |**k| }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :"**k", [:block, [:"**k"]]], [:nil]]]]
+     [:arglist, [:iter, [:args, :"**k", [:kwargs, [:"**k"]]], [:nil]]]]
   end
 
   parse "m { |**k; x| }" do
@@ -146,7 +149,7 @@ describe "An Iter node" do
      nil,
      :m,
      [:arglist,
-      [:iter, [:args, :"**k", [:block, [:"**k"]]], [:block, [[:lvar, :x]]]]]]
+      [:iter, [:args, :"**k", [:kwargs, [:"**k"]]], [:block, [[:lvar, :x]]]]]]
   end
 
   parse "m { |&b| }" do
@@ -158,11 +161,11 @@ describe "An Iter node" do
   end
 
   parse "m { |a, | }" do
-    [:call, nil, :m, [:arglist, [:iter, [:args, :a, :*], [:nil]]]]
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a], [:nil]]]]
   end
 
   parse "m { |a,; x| }" do
-    [:call, nil, :m, [:arglist, [:iter, [:args, :a, :*], [:block, [[:lvar, :x]]]]]]
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a], [:block, [[:lvar, :x]]]]]]
   end
 
   parse "m { |a, b| }" do
@@ -190,7 +193,7 @@ describe "An Iter node" do
   end
 
   parse "m { |a, b:| }" do
-    [:call, nil, :m, [:arglist, [:iter, [:args, :a, :b, [:block, [:b]]], [:nil]]]]
+    [:call, nil, :m, [:arglist, [:iter, [:args, :a, :b, [:kwargs, [:b]]], [:nil]]]]
   end
 
   parse "m { |a, b: 1| }" do
@@ -198,21 +201,21 @@ describe "An Iter node" do
      nil,
      :m,
      [:arglist,
-      [:iter, [:args, :a, :b, [:block, [:b], [[:lasgn, :b, [:lit, 1]]]]], [:nil]]]]
+      [:iter, [:args, :a, :b, [:kwargs, [:b], [[:lasgn, :b, [:lit, 1]]]]], [:nil]]]]
   end
 
   parse "m { |a, **| }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :a, :**, [:block, [:**]]], [:nil]]]]
+     [:arglist, [:iter, [:args, :a, :**, [:kwargs, [:**]]], [:nil]]]]
   end
 
   parse "m { |a, **k| }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :a, :"**k", [:block, [:"**k"]]], [:nil]]]]
+     [:arglist, [:iter, [:args, :a, :"**k", [:kwargs, [:"**k"]]], [:nil]]]]
   end
 
   parse "m { |a, &b| }" do
@@ -259,7 +262,7 @@ describe "An Iter node" do
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :b, [:block, [:lasgn, :a, [:lit, 1]]], [:block, [:b]]],
+       [:args, :a, :b, [:block, [:lasgn, :a, [:lit, 1]]], [:kwargs, [:b]]],
        [:nil]]]]
   end
 
@@ -273,7 +276,7 @@ describe "An Iter node" do
         :a,
         :b,
         [:block, [:lasgn, :a, [:lit, 1]]],
-        [:block, [:b], [[:lasgn, :b, [:lit, 2]]]]],
+        [:kwargs, [:b], [[:lasgn, :b, [:lit, 2]]]]],
        [:nil]]]]
   end
 
@@ -283,7 +286,7 @@ describe "An Iter node" do
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :**, [:block, [:lasgn, :a, [:lit, 1]]], [:block, [:**]]],
+       [:args, :a, :**, [:block, [:lasgn, :a, [:lit, 1]]], [:kwargs, [:**]]],
        [:nil]]]]
   end
 
@@ -293,7 +296,7 @@ describe "An Iter node" do
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :"**k", [:block, [:lasgn, :a, [:lit, 1]]], [:block, [:"**k"]]],
+       [:args, :a, :"**k", [:block, [:lasgn, :a, [:lit, 1]]], [:kwargs, [:"**k"]]],
        [:nil]]]]
   end
 
@@ -314,14 +317,14 @@ describe "An Iter node" do
   end
 
   parse "m { |*, a:| }" do
-    [:call, nil, :m, [:arglist, [:iter, [:args, :*, :a, [:block, [:a]]], [:nil]]]]
+    [:call, nil, :m, [:arglist, [:iter, [:args, :*, :a, [:kwargs, [:a]]], [:nil]]]]
   end
 
   parse "m { |*a, b:| }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :"*a", :b, [:block, [:b]]], [:nil]]]]
+     [:arglist, [:iter, [:args, :"*a", :b, [:kwargs, [:b]]], [:nil]]]]
   end
 
   parse "m { |*, a: 1| }" do
@@ -329,7 +332,7 @@ describe "An Iter node" do
      nil,
      :m,
      [:arglist,
-      [:iter, [:args, :*, :a, [:block, [:a], [[:lasgn, :a, [:lit, 1]]]]], [:nil]]]]
+      [:iter, [:args, :*, :a, [:kwargs, [:a], [[:lasgn, :a, [:lit, 1]]]]], [:nil]]]]
   end
 
   parse "m { |*a, b: 1| }" do
@@ -338,7 +341,7 @@ describe "An Iter node" do
      :m,
      [:arglist,
       [:iter,
-       [:args, :"*a", :b, [:block, [:b], [[:lasgn, :b, [:lit, 1]]]]],
+       [:args, :"*a", :b, [:kwargs, [:b], [[:lasgn, :b, [:lit, 1]]]]],
        [:nil]]]]
   end
 
@@ -346,28 +349,28 @@ describe "An Iter node" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :*, :**, [:block, [:**]]], [:nil]]]]
+     [:arglist, [:iter, [:args, :*, :**, [:kwargs, [:**]]], [:nil]]]]
   end
 
   parse "m { |*a, **| }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :"*a", :**, [:block, [:**]]], [:nil]]]]
+     [:arglist, [:iter, [:args, :"*a", :**, [:kwargs, [:**]]], [:nil]]]]
   end
 
   parse "m { |*, **k| }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :*, :"**k", [:block, [:"**k"]]], [:nil]]]]
+     [:arglist, [:iter, [:args, :*, :"**k", [:kwargs, [:"**k"]]], [:nil]]]]
   end
 
   parse "m { |*a, **k| }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :"*a", :"**k", [:block, [:"**k"]]], [:nil]]]]
+     [:arglist, [:iter, [:args, :"*a", :"**k", [:kwargs, [:"**k"]]], [:nil]]]]
   end
 
   parse "m { |*, &b| }" do
@@ -382,7 +385,7 @@ describe "An Iter node" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :a, :b, [:block, [:a, :b]]], [:nil]]]]
+     [:arglist, [:iter, [:args, :a, :b, [:kwargs, [:a, :b]]], [:nil]]]]
   end
 
   parse "m { |a:, b: 1| }" do
@@ -391,7 +394,7 @@ describe "An Iter node" do
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :b, [:block, [:a, :b], [[:lasgn, :b, [:lit, 1]]]]],
+       [:args, :a, :b, [:kwargs, [:a, :b], [[:lasgn, :b, [:lit, 1]]]]],
        [:nil]]]]
   end
 
@@ -399,21 +402,21 @@ describe "An Iter node" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :a, :**, [:block, [:a, :**]]], [:nil]]]]
+     [:arglist, [:iter, [:args, :a, :**, [:kwargs, [:a, :**]]], [:nil]]]]
   end
 
   parse "m { |a:, **k| }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :a, :"**k", [:block, [:a, :"**k"]]], [:nil]]]]
+     [:arglist, [:iter, [:args, :a, :"**k", [:kwargs, [:a, :"**k"]]], [:nil]]]]
   end
 
   parse "m { |a:, &b| }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :a, :"&b", [:block, [:a]]], [:nil]]]]
+     [:arglist, [:iter, [:args, :a, :"&b", [:kwargs, [:a]]], [:nil]]]]
   end
 
   parse "m { |a: 1, b:| }" do
@@ -422,7 +425,7 @@ describe "An Iter node" do
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :b, [:block, [:a, :b], [[:lasgn, :a, [:lit, 1]]]]],
+       [:args, :a, :b, [:kwargs, [:a, :b], [[:lasgn, :a, [:lit, 1]]]]],
        [:nil]]]]
   end
 
@@ -435,7 +438,7 @@ describe "An Iter node" do
        [:args,
         :a,
         :b,
-        [:block, [:a, :b], [[:lasgn, :a, [:lit, 1]], [:lasgn, :b, [:lit, 2]]]]],
+        [:kwargs, [:a, :b], [[:lasgn, :a, [:lit, 1]], [:lasgn, :b, [:lit, 2]]]]],
        [:nil]]]]
   end
 
@@ -445,7 +448,7 @@ describe "An Iter node" do
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :**, [:block, [:a, :**], [[:lasgn, :a, [:lit, 1]]]]],
+       [:args, :a, :**, [:kwargs, [:a, :**], [[:lasgn, :a, [:lit, 1]]]]],
        [:nil]]]]
   end
 
@@ -455,7 +458,7 @@ describe "An Iter node" do
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :"**k", [:block, [:a, :"**k"], [[:lasgn, :a, [:lit, 1]]]]],
+       [:args, :a, :"**k", [:kwargs, [:a, :"**k"], [[:lasgn, :a, [:lit, 1]]]]],
        [:nil]]]]
   end
 
@@ -465,7 +468,7 @@ describe "An Iter node" do
      :m,
      [:arglist,
       [:iter,
-       [:args, :a, :"&b", [:block, [:a], [[:lasgn, :a, [:lit, 1]]]]],
+       [:args, :a, :"&b", [:kwargs, [:a], [[:lasgn, :a, [:lit, 1]]]]],
        [:nil]]]]
   end
 
@@ -473,14 +476,14 @@ describe "An Iter node" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :**, :"&b", [:block, [:**]]], [:nil]]]]
+     [:arglist, [:iter, [:args, :**, :"&b", [:kwargs, [:**]]], [:nil]]]]
   end
 
   parse "m { |**k, &b| }" do
     [:call,
      nil,
      :m,
-     [:arglist, [:iter, [:args, :"**k", :"&b", [:block, [:"**k"]]], [:nil]]]]
+     [:arglist, [:iter, [:args, :"**k", :"&b", [:kwargs, [:"**k"]]], [:nil]]]]
   end
 
   parse "m { n = 1; m { n } }" do
@@ -512,7 +515,7 @@ describe "An Iter node" do
         :"**k",
         :"&l",
         [:block, [:lasgn, :b, [:lit, 1]]],
-        [:block, [:e, :f, :"**k"], [[:lasgn, :f, [:lit, 2]]]]],
+        [:kwargs, [:e, :f, :"**k"], [[:lasgn, :f, [:lit, 2]]]]],
        [:nil]]]]
   end
 
@@ -534,7 +537,7 @@ describe "An Iter node" do
         :"**k",
         :"&l",
         [:block, [:lasgn, :b, [:lit, 1]]],
-        [:block, [:e, :f, :"**k"], [[:lasgn, :f, [:lit, 2]]]]],
+        [:kwargs, [:e, :f, :"**k"], [[:lasgn, :f, [:lit, 2]]]]],
        [:nil]]]]
   end
 
@@ -554,7 +557,7 @@ describe "An Iter node" do
         :"**k",
         :"&l",
         [:block, [:lasgn, :b, [:lit, 1]]],
-        [:block, [:e, :f, :"**k"], [[:lasgn, :f, [:lit, 2]]]]],
+        [:kwargs, [:e, :f, :"**k"], [[:lasgn, :f, [:lit, 2]]]]],
        [:nil]]]]
   end
 
@@ -576,7 +579,7 @@ describe "An Iter node" do
         :"**k",
         :"&l",
         [:block, [:lasgn, :b, [:lit, 1]]],
-        [:block, [:e, :f, :"**k"], [[:lasgn, :f, [:lit, 2]]]]],
+        [:kwargs, [:e, :f, :"**k"], [[:lasgn, :f, [:lit, 2]]]]],
        [:nil]]]]
   end
 

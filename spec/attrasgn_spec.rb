@@ -21,8 +21,9 @@ describe "An Attrasgn node" do
      [:call, nil, :a, [:arglist]],
      :[]=,
      [:arglist,
-      [:splat, [:call, nil, :b, [:arglist]]],
-      [:call, nil, :c, [:arglist]]]]
+      [:argspush,
+       [:splat, [:call, nil, :b, [:arglist]]],
+       [:call, nil, :c, [:arglist]]]]]
   end
 
   parse "a[b, *c] = d" do
@@ -30,10 +31,11 @@ describe "An Attrasgn node" do
      [:call, nil, :a, [:arglist]],
      :[]=,
      [:arglist,
-      [:argscat,
-       [:array, [:call, nil, :b, [:arglist]]],
-       [:call, nil, :c, [:arglist]]],
-      [:call, nil, :d, [:arglist]]]]
+      [:argspush,
+       [:argscat,
+        [:array, [:call, nil, :b, [:arglist]]],
+        [:call, nil, :c, [:arglist]]],
+       [:call, nil, :d, [:arglist]]]]]
   end
 
   parse "a[b, *c] = *d" do
@@ -41,10 +43,11 @@ describe "An Attrasgn node" do
      [:call, nil, :a, [:arglist]],
      :[]=,
      [:arglist,
-      [:argscat,
-       [:array, [:call, nil, :b, [:arglist]]],
-       [:call, nil, :c, [:arglist]]],
-      [:splat, [:call, nil, :d, [:arglist]]]]]
+      [:argspush,
+       [:argscat,
+        [:array, [:call, nil, :b, [:arglist]]],
+        [:call, nil, :c, [:arglist]]],
+       [:splat, [:call, nil, :d, [:arglist]]]]]]
   end
 
   parse "a[b, *c] = d, e" do
@@ -52,10 +55,11 @@ describe "An Attrasgn node" do
      [:call, nil, :a, [:arglist]],
      :[]=,
      [:arglist,
-      [:argscat,
-       [:array, [:call, nil, :b, [:arglist]]],
-       [:call, nil, :c, [:arglist]]],
-      [:array, [:call, nil, :d, [:arglist]], [:call, nil, :e, [:arglist]]]]]
+      [:argspush,
+       [:argscat,
+        [:array, [:call, nil, :b, [:arglist]]],
+        [:call, nil, :c, [:arglist]]],
+       [:array, [:call, nil, :d, [:arglist]], [:call, nil, :e, [:arglist]]]]]]
   end
 
   parse "a[42] = 24" do

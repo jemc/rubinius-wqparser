@@ -36,11 +36,11 @@ describe "A Lit node" do
   end
 
   parse "2i" do
-    # [:lit, (0+2i)]
+    [:lit, (0+2i)]
   end
 
   parse "3+2i" do
-    # [:call, [:lit, 3], :+, [:arglist, [:lit, (0+2i)]]]
+    [:call, [:lit, 3], :+, [:arglist, [:lit, (0+2i)]]]
   end
 
   parse "8000_0000" do

@@ -6,7 +6,7 @@ describe "A For node" do
     ruby
 
     [:for,
-     [:lasgn, :o],
+     [:args, [:lasgn, :o]],
      [:call, nil, :ary, [:arglist]],
      [:call, nil, :puts, [:arglist, [:lvar, :o]]]]
   end
@@ -18,7 +18,7 @@ describe "A For node" do
     ruby
 
     [:for,
-     [:lasgn, :i],
+     [:args, [:lasgn, :i]],
      [:dot2, [:lit, 0], [:call, nil, :max, [:arglist]]],
      [:nil]]
   end
@@ -30,7 +30,7 @@ describe "A For node" do
     ruby
 
     [:for,
-     [:masgn, [:array, [:lasgn, :a], [:lasgn, :b]]],
+     [:args, [:masgn, [:array, [:lasgn, :a], [:lasgn, :b]]]],
      [:call, nil, :x, [:arglist]],
      [:lit, 5]]
   end
@@ -41,7 +41,7 @@ describe "A For node" do
       end
     ruby
 
-    [:for, [:lasgn, :i], [:nil], [:lvar, :i]]
+    [:for, [:args, [:lasgn, :i]], [:nil], [:lvar, :i]]
   end
 
   parse <<-ruby do
@@ -56,8 +56,8 @@ describe "A For node" do
     [:block,
      [:lasgn, :c, [:lit, 1]],
      [:for,
-      [:lasgn, :i],
+      [:args, [:lasgn, :i]],
       [:call, nil, :a, [:arglist]],
-      [:for, [:lasgn, :j], [:call, nil, :b, [:arglist]], [:lvar, :c]]]]
+      [:for, [:args, [:lasgn, :j]], [:call, nil, :b, [:arglist]], [:lvar, :c]]]]
   end
 end
