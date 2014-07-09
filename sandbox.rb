@@ -380,9 +380,9 @@ class RubiniusBuilder < Parser::Builders::Default
     if lhs.is_a?(RBX::AST::Send)
       if lhs.name == :[]
         ary = RBX::AST::ArrayLiteral.new line, lhs.arguments.array
-        RBX::AST::OpAssign1.new line, lhs.receiver, ary, name, rhs
+        RBX::AST::OpAssignElement.new line, lhs.receiver, ary, name, rhs
       else
-        RBX::AST::OpAssign2.new line, lhs.receiver, lhs.name, name, rhs
+        RBX::AST::OpAssignAttribute.new line, lhs.receiver, lhs.name, name, rhs
       end
     else
       lhs = assignable(lhs)
@@ -514,7 +514,11 @@ class RubiniusBuilder < Parser::Builders::Default
       optional = RBX::AST::Block.new line, optional
     end
     
-    RBX::AST::FormalArguments19.new line, required, optional, splat, post, block
+    RBX::AST::Parameters.new line,
+      required, optional, splat, post, nil, nil, block
+    
+    # def initialize(line, required=nil, optional=nil, splat=nil,
+    #                post=nil, kwargs=nil, kwrest=nil, block=nil)
   end
 
   def arg(token)
@@ -593,7 +597,7 @@ class RubiniusBuilder < Parser::Builders::Default
   def block(method_call, begin_t, args, body, end_t)
     # RBX::AST::Block.new line(begin_t), [body]
     
-    method_call.block = RBX::AST::Iter19.new line(begin_t), args, body
+    method_call.block = RBX::AST::Iter.new line(begin_t), args, body
     method_call
     
     # _receiver, _selector, *call_args = *method_call
@@ -1029,7 +1033,7 @@ private
     elsif kls == RBX::AST::ScopedConstant
       RBX::AST::ConstantAssignment.new line, orig, value
     elsif kls == RBX::AST::AttributeAssignment
-      orig.arguments = RBX::AST::ActualArguments.new line, value
+      orig.arguments = RBX::AST::Arguments.new line, value
       orig
     elsif kls == RBX::AST::ElementAssignment
       orig.arguments.array << value
