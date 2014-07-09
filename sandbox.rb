@@ -233,20 +233,17 @@ class RubiniusBuilder < Parser::Builders::Default
   #   end
   # end
 
-  # def pair_keyword(key_t, value)
-  #   key_map, pair_map = pair_keyword_map(key_t, value)
+  def pair_keyword(key_t, value)
+    key = RBX::AST::SymbolLiteral.new line(key_t), value(key_t).to_sym
+    [key, value]
+  end
 
-  #   key = n(:sym, [ value(key_t).to_sym ], key_map)
-
-  #   n(:pair, [ key, value ], pair_map)
-  # end
-
-  # def kwsplat(dstar_t, arg)
-  #   n(:kwsplat, [ arg ],
-  #     unary_op_map(dstar_t, arg))
-  # end
+  def kwsplat(dstar_t, arg)
+    [:kwsplat, arg]
+  end
 
   def associate(begin_t, pairs, end_t)
+    pairs.each { |pair| pair[0] = nil if pair[0]==:kwsplat }
     RBX::AST::HashLiteral.new line(begin_t), pairs.flatten
   end
 
@@ -1111,16 +1108,15 @@ private
 end
 
 
-# class RBX::AST::ReceiverCase
+# class RBX::AST::HashLiteral
 #   class << self
 #     deco :new do |*args|
-#       p [:ReceiverCase_new, *args]
+#       p [:HashLiteral_new, *args]
 #       puts args.last
 #       deco_super *args
 #     end
 #   end
 # end
-
 
 class String
   def to_sexp
