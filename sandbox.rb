@@ -504,6 +504,9 @@ class RubiniusBuilder < Parser::Builders::Default
     post     = args.detect { |type, arg| type == :post     }; post  = post .last if post
     block    = args.detect { |type, arg| type == :block    }; block = block.last if block
     
+    kwargs   = args.select { |type, arg| type == :kwarg    }.map(&:last)
+    kwrest   = args.detect { |type, arg| type == :kwrest   }; kwrest = kwrest.last if kwrest
+    
     if optional.empty?
       optional = nil
     else
@@ -511,11 +514,15 @@ class RubiniusBuilder < Parser::Builders::Default
       optional = RBX::AST::Block.new line, optional
     end
     
-    RBX::AST::Parameters.new line,
-      required, optional, splat, post, nil, nil, block
+    if kwargs.empty?
+      kwargs = nil
+    else
+      kwargs.map! { |a| RBX::AST::LocalVariableAssignment.new *a }
+      kwargs = RBX::AST::Block.new line, kwargs
+    end
     
-    # def initialize(line, required=nil, optional=nil, splat=nil,
-    #                post=nil, kwargs=nil, kwrest=nil, block=nil)
+    RBX::AST::Parameters.new line,
+      required, optional, splat, post, kwargs, kwrest, block
   end
 
   def arg(token)
@@ -526,37 +533,23 @@ class RubiniusBuilder < Parser::Builders::Default
     [:optional, [line(eql_t), value(name_t).to_sym, value]]
   end
 
-  # def optarg(name_t, eql_t, value)
-  #   n(:optarg, [ value(name_t).to_sym, value ],
-  #     variable_map(name_t).
-  #       with_operator(loc(eql_t)).
-  #       with_expression(loc(name_t).join(value.loc.expression)))
-  # end
-
   def restarg(star_t, name_t=nil)
     value = name_t ? value(name_t).to_sym : :*
     [:splat, value]
   end
 
-  # def kwarg(name_t)
-  #   n(:kwarg, [ value(name_t).to_sym ],
-  #     kwarg_map(name_t))
-  # end
+  def kwarg(name_t)
+    value = RBX::AST::SymbolLiteral.new line(name_t), :*
+    [:kwarg, [line(name_t), value(name_t).to_sym, value]]
+  end
 
-  # def kwoptarg(name_t, value)
-  #   n(:kwoptarg, [ value(name_t).to_sym, value ],
-  #     kwarg_map(name_t, value))
-  # end
+  def kwoptarg(name_t, value)
+    [:kwarg, [line(name_t), value(name_t).to_sym, value]]
+  end
 
-  # def kwrestarg(dstar_t, name_t=nil)
-  #   if name_t
-  #     n(:kwrestarg, [ value(name_t).to_sym ],
-  #       arg_prefix_map(dstar_t, name_t))
-  #   else
-  #     n0(:kwrestarg,
-  #       arg_prefix_map(dstar_t))
-  #   end
-  # end
+  def kwrestarg(dstar_t, name_t=nil)
+    [:kwrest, name_t ? value(name_t).to_sym : true]
+  end
 
   # def shadowarg(name_t)
   #   n(:shadowarg, [ value(name_t).to_sym ],
@@ -1108,10 +1101,10 @@ private
 end
 
 
-# class RBX::AST::HashLiteral
+# class RBX::AST::KeywordParameters
 #   class << self
 #     deco :new do |*args|
-#       p [:HashLiteral_new, *args]
+#       p [:KeywordParameters_new, *args]
 #       puts args.last
 #       deco_super *args
 #     end
