@@ -494,18 +494,27 @@ class RubiniusBuilder < Parser::Builders::Default
   #
   # Formal arguments
   #
-
+  
+  def _consume_consecutive_args(args, type)
+    [].tap do |ary|
+      ary.push args.shift.last until args.empty? or args.first.first != type
+    end
+  end
+  
+  def _consume_possible_arg(args, type)
+    args.shift.last unless args.empty? or args.first.first != type
+  end
+  
   def args(begin_t, args, end_t, check_args=true)
     line = begin_t ? line(begin_t) : 0
     
-    required = args.select { |type, arg| type == :required }.map(&:last)
-    optional = args.select { |type, arg| type == :optional }.map(&:last)
-    splat    = args.detect { |type, arg| type == :splat    }; splat = splat.last if splat
-    post     = args.detect { |type, arg| type == :post     }; post  = post .last if post
-    block    = args.detect { |type, arg| type == :block    }; block = block.last if block
-    
-    kwargs   = args.select { |type, arg| type == :kwarg    }.map(&:last)
-    kwrest   = args.detect { |type, arg| type == :kwrest   }; kwrest = kwrest.last if kwrest
+    required = _consume_consecutive_args args, :required
+    optional = _consume_consecutive_args args, :optional
+    splat    = _consume_possible_arg     args, :splat
+    post     = _consume_consecutive_args args, :required
+    kwargs   = _consume_consecutive_args args, :kwarg
+    kwrest   = _consume_possible_arg     args, :kwrest
+    block    = _consume_possible_arg     args, :block
     
     if optional.empty?
       optional = nil
@@ -551,10 +560,9 @@ class RubiniusBuilder < Parser::Builders::Default
     [:kwrest, name_t ? value(name_t).to_sym : true]
   end
 
-  # def shadowarg(name_t)
-  #   n(:shadowarg, [ value(name_t).to_sym ],
-  #     variable_map(name_t))
-  # end
+  def shadowarg(name_t)
+    [:shadowarg, nil]
+  end
 
   def blockarg(amper_t, name_t)
     [:block, value(name_t).to_sym]

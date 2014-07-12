@@ -1,3 +1,1 @@
 fails:"A Defs node is parsed from \n    def x.m(a=1, (b, (c, *d), *e)) end"
-fails:"A Defs node is parsed from \n    def x.m(a, b=1, *c, d, e:, f: 2, g:, **k, &l) end"
-fails:"A Defs node is parsed from \n    def x.m a, b=1, *c, d, e:, f: 2, g:, **k, &l\n    end"
