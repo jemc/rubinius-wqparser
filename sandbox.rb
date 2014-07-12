@@ -170,14 +170,18 @@ class RubiniusBuilder < Parser::Builders::Default
         end
         element
       else
-        rest = elements.pop
-        rest = rest.value if rest.respond_to? :value
-        array = RBX::AST::ArrayLiteral.new line, elements
-        RBX::AST::ConcatArgs.new line, array, rest
+        _make_concat_args(line, elements)
       end
     else
       RBX::AST::ArrayLiteral.new line, elements
     end
+  end
+  
+  def _make_concat_args(line, elements)
+    rest = elements.pop
+    rest = rest.value if rest.respond_to? :value
+    array = RBX::AST::ArrayLiteral.new line, elements
+    RBX::AST::ConcatArgs.new line, array, rest
   end
 
   def splat(star_t, arg=nil)
@@ -1028,8 +1032,24 @@ private
       orig.arguments = RBX::AST::Arguments.new line, value
       orig
     elsif kls == RBX::AST::ElementAssignment
-      orig.arguments.array << value
-      orig
+      orig_args = orig.arguments.array
+      
+      if value.is_a? RBX::AST::ConcatArgs
+        value = value.array.tap { |ary| ary.body << value.rest }
+      end
+      
+      if orig_args.detect { |x| x.is_a? RBX::AST::SplatValue }
+        push_args = if orig_args.count == 1
+          orig.arguments = RBX::AST::PushArgs.new line, orig_args.first, value
+        else
+          concat_args = _make_concat_args line, orig_args
+          orig.arguments = RBX::AST::PushArgs.new line, concat_args, value
+        end
+        RBX::AST::ElementAssignment.new line, orig.receiver, push_args
+      else
+        orig_args << value
+        orig
+      end
     else
       binding.pry
       raise 'bomb!'
@@ -1103,15 +1123,34 @@ private
 end
 
 
-# class RBX::AST::KeywordParameters
+# class RBX::AST::PushArgs
 #   class << self
 #     deco :new do |*args|
-#       p [:KeywordParameters_new, *args]
+#       pp [:PushArgs_new, *args]
 #       puts args.last
 #       deco_super *args
 #     end
 #   end
 # end
+# class RBX::AST::SendWithArguments
+#   class << self
+#     deco :new do |*args|
+#       pp [:SendWithArguments_new, *args]
+#       puts args.last
+#       deco_super *args
+#     end
+#   end
+# end
+# class RBX::AST::ElementAssignment
+#   class << self
+#     deco :new do |*args|
+#       pp [:ElementAssignment_new, *args]
+#       puts args.last
+#       deco_super *args
+#     end
+#   end
+# end
+# eval "a[*b] = c"
 
 class String
   def to_sexp

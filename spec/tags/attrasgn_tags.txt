@@ -1,4 +1,0 @@
-fails:An Attrasgn node is parsed from 'a[b, *c] = d'
-fails:An Attrasgn node is parsed from 'a[b, *c] = *d'
-fails:An Attrasgn node is parsed from 'a[b, *c] = d, e'
-fails:An Attrasgn node is parsed from 'a[*b] = c'
