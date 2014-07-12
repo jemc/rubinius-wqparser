@@ -10,15 +10,6 @@ require 'parser/current'
 
 RBX = Rubinius::ToolSets.current
 
-# module RBX; end
-# module RBX::AST; end
-
-# class Parser::AST::Node
-#   def initialize
-#     p [:whup, caller]
-#   end
-# end
-
 class RubiniusBuilder < Parser::Builders::Default
   
   #
@@ -587,13 +578,16 @@ class RubiniusBuilder < Parser::Builders::Default
     end
   end
 
-  # def call_lambda(lambda_t)
-  #   n(:send, [ nil, :lambda ],
-  #     send_map(nil, nil, lambda_t))
-  # end
+  def call_lambda(lambda_t)
+    :lambda
+  end
 
   def block(method_call, begin_t, args, body, end_t)
     # RBX::AST::Block.new line(begin_t), [body]
+    
+    if method_call == :lambda
+      return RBX::AST::Lambda.new line(begin_t), args, body
+    end
     
     method_call.block = RBX::AST::Iter.new line(begin_t), args, body
     method_call
