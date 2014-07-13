@@ -155,8 +155,7 @@ class RubiniusBuilder < Parser::Builders::Default
     line = line(begin_t)
     elements ||= []
     
-    if elements.detect { |x| x.is_a?(RBX::AST::SplatValue) \
-    or x.is_a?(RBX::AST::Send) or x.is_a?(RBX::AST::SendWithArguments) }
+    if elements.detect { |x| x.is_a?(RBX::AST::SplatValue) }
       if elements.empty?
         RBX::AST::NilLiteral.new line
       elsif elements.one?
@@ -1030,8 +1029,14 @@ private
   end
   
   def convert_to_assignment(line, orig, value)
+    kls = orig.class
+    
+    if kls == RBX::AST::SplatValue
+      orig.value = convert_to_assignment line, orig.value, value
+      return orig
+    end
+    
     name = orig.name
-    kls  = orig.class
     
     if    kls == RBX::AST::Send
       RBX::AST::LocalVariableAssignment.new line, name, value
