@@ -33,9 +33,9 @@ task :sandbox do
     puts "      : #{str}"
     puts "expect: #{block.call.inspect}"
     puts "actual: #{actual.inspect}"
+    puts block.call == actual ? "PASS" : "FAIL"
   end
 end
 
 task :default => :spec
 # task :default => :sandbox
-

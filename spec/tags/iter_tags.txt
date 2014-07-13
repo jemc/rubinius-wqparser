@@ -1,3 +1,1 @@
-fails:An Iter node is parsed from 'm { |a, (b, c)| }'
-fails:An Iter node is parsed from 'm { |a=1, (b, (c, *d), *e)| }'
 fails:An Iter node is parsed from 'm { |; x| }'

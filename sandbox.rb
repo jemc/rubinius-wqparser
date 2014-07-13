@@ -412,8 +412,43 @@ class RubiniusBuilder < Parser::Builders::Default
   
   def multi_lhs(begin_t, items, end_t)
     line = line(begin_t)
+    
+    # For the special case of masgn in parameters
+    if items.map { |x| x.is_a? Array and x.first.is_a? Symbol }.all?
+      return param_multi_lhs(line, items)
+    end
+    
     items = items.map { |item| convert_to_assignment line, item, nil }
-    RBX::AST::ArrayLiteral.new line(begin_t), items
+    RBX::AST::ArrayLiteral.new line, items
+  end
+  
+  def param_multi_lhs(line, items)
+    saw_splat = false
+    post_items = []
+    items = items.map do |type, value|
+      case type
+      when :splat
+        saw_splat = true
+        if value == :*
+          masgn = RBX::AST::MultipleAssignment.new line, nil, nil, true
+          return [:masgn, masgn]
+        end
+        value = RBX::AST::LocalVariableAssignment.new line, value
+        RBX::AST::SplatValue.new line, value
+      when :required
+        new_item = RBX::AST::LocalVariableAssignment.new line, value
+        saw_splat ? (post_items << new_item; nil) : new_item
+      when :masgn
+        value
+      else
+        type
+      end
+    end.compact
+    lhs = RBX::AST::ArrayLiteral.new line, items
+    masgn = RBX::AST::MultipleAssignment.new line, lhs, nil, nil
+    post = RBX::AST::ArrayLiteral.new line, post_items
+    masgn.post = post unless post_items.empty?
+    [:masgn, masgn]
   end
   
   def multi_assign(lhs, eql_t, rhs)
@@ -502,14 +537,17 @@ class RubiniusBuilder < Parser::Builders::Default
   def args(begin_t, args, end_t, check_args=true)
     line = begin_t ? line(begin_t) : 0
     
-    required = _consume_consecutive_args args, :required
-    optional = _consume_consecutive_args args, :optional
-    splat    = _consume_possible_arg     args, :splat
-    post     = _consume_consecutive_args args, :required
-    kwargs   = _consume_consecutive_args args, :kwarg
-    kwrest   = _consume_possible_arg     args, :kwrest
-    block    = _consume_possible_arg     args, :block
-    shadows  = _consume_consecutive_args args, :shadow
+    masgn     = []
+    required  = _consume_consecutive_args args, :required
+    required += _consume_consecutive_args args, :masgn
+    optional  = _consume_consecutive_args args, :optional
+    splat     = _consume_possible_arg     args, :splat
+    post      = _consume_consecutive_args args, :required
+    post     += _consume_consecutive_args args, :masgn
+    kwargs    = _consume_consecutive_args args, :kwarg
+    kwrest    = _consume_possible_arg     args, :kwrest
+    block     = _consume_possible_arg     args, :block
+    shadows   = _consume_consecutive_args args, :shadow
     
     if optional.empty?
       optional = nil
@@ -1149,19 +1187,19 @@ private
 end
 
 
-# class RBX::AST::Parameters
+# class RBX::AST::MultipleAssignment
 #   class << self
 #     deco :new do |*args|
-#       pp [:Parameters_new, *args]
+#       pp [:MultipleAssignment_new, *args]
 #       puts args.last
 #       deco_super *args
 #     end
 #   end
 # end
-# class RBX::AST::Iter
+# class RBX::AST::ArrayLiteral
 #   class << self
 #     deco :new do |*args|
-#       pp [:Iter_new, *args]
+#       pp [:ArrayLiteral_new, *args]
 #       puts args.last
 #       deco_super *args
 #     end
