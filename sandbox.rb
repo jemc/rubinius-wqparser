@@ -510,6 +510,7 @@ class RubiniusBuilder < Parser::Builders::Default
     kwargs   = _consume_consecutive_args args, :kwarg
     kwrest   = _consume_possible_arg     args, :kwrest
     block    = _consume_possible_arg     args, :block
+    shadows  = _consume_consecutive_args args, :shadow
     
     if optional.empty?
       optional = nil
@@ -525,8 +526,15 @@ class RubiniusBuilder < Parser::Builders::Default
       kwargs = RBX::AST::Block.new line, kwargs
     end
     
-    RBX::AST::Parameters.new line,
+    params = RBX::AST::Parameters.new line,
       required, optional, splat, post, kwargs, kwrest, block
+    
+    unless shadows.empty?
+      shadows = RBX::AST::ArrayLiteral.new line, shadows
+      params.instance_variable_set :@shadows, shadows
+    end
+    
+    params
   end
 
   def arg(token)
@@ -556,7 +564,8 @@ class RubiniusBuilder < Parser::Builders::Default
   end
 
   def shadowarg(name_t)
-    [:shadowarg, nil]
+    shadow = RBX::AST::SymbolLiteral.new line(name_t), value(name_t).to_sym
+    [:shadow, shadow]
   end
 
   def blockarg(amper_t, name_t)
@@ -587,13 +596,25 @@ class RubiniusBuilder < Parser::Builders::Default
   end
 
   def block(method_call, begin_t, args, body, end_t)
-    # RBX::AST::Block.new line(begin_t), [body]
-    
     if method_call == :lambda
       return RBX::AST::Lambda.new line(begin_t), args, body
     end
     
+    shadows = args.instance_variable_get :@shadows
+    if shadows
+      if body.is_a? RBX::AST::NilLiteral
+        body = RBX::AST::Block.new line(begin_t), []
+      end
+      
+      unless body.is_a? RBX::AST::Block
+        body = RBX::AST::Block.new line(begin_t), [body]
+      end
+      
+      body.locals = shadows
+    end
+    
     method_call.block = RBX::AST::Iter.new line(begin_t), args, body
+    
     method_call
     
     # _receiver, _selector, *call_args = *method_call
@@ -1123,34 +1144,33 @@ private
 end
 
 
-# class RBX::AST::PushArgs
+# class RBX::AST::Parameters
 #   class << self
 #     deco :new do |*args|
-#       pp [:PushArgs_new, *args]
+#       pp [:Parameters_new, *args]
 #       puts args.last
 #       deco_super *args
 #     end
 #   end
 # end
-# class RBX::AST::SendWithArguments
+# class RBX::AST::Iter
 #   class << self
 #     deco :new do |*args|
-#       pp [:SendWithArguments_new, *args]
+#       pp [:Iter_new, *args]
 #       puts args.last
 #       deco_super *args
 #     end
 #   end
 # end
-# class RBX::AST::ElementAssignment
+# class RBX::AST::Send
 #   class << self
 #     deco :new do |*args|
-#       pp [:ElementAssignment_new, *args]
+#       pp [:Send_new, *args]
 #       puts args.last
 #       deco_super *args
 #     end
 #   end
 # end
-# eval "a[*b] = c"
 
 class String
   def to_sexp
