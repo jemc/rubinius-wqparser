@@ -768,10 +768,9 @@ class RubiniusBuilder < Parser::Builders::Default
     RBX::AST::If.new line(cond_t), check_condition(cond), if_true, if_false
   end
   
-  # def ternary(cond, question_t, if_true, colon_t, if_false)
-  #   n(:if, [ check_condition(cond), if_true, if_false ],
-  #     ternary_map(cond, question_t, if_true, colon_t, if_false))
-  # end
+  def ternary(cond, question_t, if_true, colon_t, if_false)
+    RBX::AST::If.new line(question_t), check_condition(cond), if_true, if_false
+  end
 
   # Case matching
 
