@@ -184,7 +184,11 @@ class RubiniusBuilder < Parser::Builders::Default
   end
 
   def splat(star_t, arg=nil)
-    RBX::AST::SplatValue.new line(star_t), arg
+    if arg
+      RBX::AST::SplatValue.new line(star_t), arg
+    else
+      RBX::AST::EmptySplat.new line(star_t), arg
+    end
   end
 
   def word(parts)
@@ -1068,15 +1072,16 @@ private
   
   def convert_to_assignment(line, orig, value)
     kls = orig.class
+    name = orig.name if orig.respond_to? :name
     
     if kls == RBX::AST::SplatValue
       orig.value = convert_to_assignment line, orig.value, value
-      return orig
-    end
-    
-    name = orig.name
-    
-    if    kls == RBX::AST::Send
+      orig
+    elsif kls == RBX::AST::EmptySplat
+      orig
+    elsif kls == RBX::AST::ArrayLiteral
+      RBX::AST::MultipleAssignment.new line, orig, value, nil
+    elsif kls == RBX::AST::Send
       RBX::AST::LocalVariableAssignment.new line, name, value
     elsif kls == RBX::AST::LocalVariableAccess
       RBX::AST::LocalVariableAssignment.new line, name, value
