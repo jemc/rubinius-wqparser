@@ -823,9 +823,10 @@ class RubiniusBuilder < Parser::Builders::Default
 
   def for(for_t, iterator, in_t, iteratee, do_t, body, end_t)
     line = line(for_t)
+    iterator = convert_to_assignment line(in_t), iterator, nil
     
     send = RBX::AST::Send.new line, iteratee, :each
-    send.block = RBX::AST::For19.new line, iterator, body
+    send.block = RBX::AST::For.new line, iterator, body
     send
   end
 
