@@ -25,18 +25,26 @@ class CodeTools::Processor < Parser::Builders::Default
   
   # Numerics
   
-  def integer(token);  numeric(token) end
-  def float(token);    numeric(token) end
-  def rational(token); numeric(token) end
-  def complex(token);  numeric(token) end
-  
-  def numeric(token)
+  def integer(token)
     value = value(token)
-    value.is_a?(Bignum) ?
-      AST::NumberLiteral.new(line(token), value) :
+    if value.is_a?(Bignum)
+      AST::NumberLiteral.new(line(token), value)
+    else
       AST::FixnumLiteral.new(line(token), value)
+    end
   end
-  private :numeric
+  
+  def float(token)
+    AST::FloatLiteral.new line(token), value(token)
+  end
+  
+  def rational(token)
+    AST::RationalLiteral.new line(token), value(token)
+  end
+  
+  def complex(token)
+    AST::ImaginaryLiteral.new line(token), value(token)
+  end
   
   def negate(token, numeric)
     numeric.value *= -1
@@ -45,9 +53,11 @@ class CodeTools::Processor < Parser::Builders::Default
   
   def __LINE__(token)
     value = line(token)
-    value.is_a?(Bignum) ?
-      AST::NumberLiteral.new(line(token), value) :
+    if value.is_a?(Bignum)
+      AST::NumberLiteral.new(line(token), value)
+    else
       AST::FixnumLiteral.new(line(token), value)
+    end
   end
   
   # Strings
