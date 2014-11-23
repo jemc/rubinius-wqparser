@@ -26,7 +26,7 @@ end
 task :sandbox do
   $SANDBOX_VERBOSE = true
   
-  require_relative 'sandbox.rb'
+  require_relative 'lib/rubinius/wqparser'
   
   def parse str, &block
     actual = str.to_sexp
