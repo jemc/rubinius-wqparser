@@ -15,6 +15,10 @@ require 'pp'
 # the repository, only occasionally updated rather than at each run.
 #
 # $ ruby spec/wq/test_parser.rb > spec/wq/parser_spec.rb
+#
+# Known problems with the generated file:
+# - sexp representations with rational literals do not have the 'r' suffix,
+#     which must be added by hand to the resulting spec.
 
 # Instantiate after definition
 (TestParser.new) if \
