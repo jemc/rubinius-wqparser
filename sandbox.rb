@@ -328,10 +328,10 @@ class RubiniusBuilder < Parser::Builders::Default
     end
   end
 
-  # def __ENCODING__(__ENCODING__t)
-  #   n0(:__ENCODING__,
-  #     token_map(__ENCODING__t))
-  # end
+  def __ENCODING__(__ENCODING__t)
+    encoding_name = __ENCODING__t.first.encoding.name
+    RBX::AST::Encoding.new line(__ENCODING__t), encoding_name
+  end
 
 
   #
