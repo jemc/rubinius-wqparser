@@ -855,10 +855,15 @@ class RubiniusBuilder < Parser::Builders::Default
   
   # BEGIN, END
   
-  # def preexe(preexe_t, lbrace_t, compstmt, rbrace_t)
-  #   n(:preexe, [ compstmt ],
-  #     keyword_map(preexe_t, lbrace_t, [], rbrace_t))
-  # end
+  def preexe(preexe_t, lbrace_t, compstmt, rbrace_t)
+    line = line(preexe_t)
+    body = RBX::AST::Block.new line, [compstmt]
+    
+    node = RBX::AST::PreExe19.new line
+    node.block = RBX::AST::Iter.new line, nil, body
+    # TODO: add_pre_exe node # as rubinius-processor does
+    node
+  end
   
   def postexe(postexe_t, lbrace_t, compstmt, rbrace_t)
     line = line(postexe_t)
