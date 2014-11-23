@@ -9,8 +9,16 @@ class ParseAsMatcher
     @expected = expected
   end
 
+  def source_to_ast(source)
+    compiler = Rubinius::ToolSets::WQParser::Compiler.new :string, :ast
+    compiler.parser.root Rubinius::ToolSets::WQParser::AST::Script
+    compiler.parser.input source, '(snippet)', 1
+    compiler.run
+    compiler.parser.instance_variable_get(:@output).body
+  end
+
   def matches?(actual)
-    @actual = actual.to_sexp.to_a
+    @actual = source_to_ast(actual).to_sexp.to_a
     @actual == @expected
   end
 

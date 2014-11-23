@@ -1,16 +1,9 @@
 
-require 'pry'
-require 'deco'
+CodeTools.send :remove_const, :Processor
 
-require 'rubinius/toolset'
-require 'rubinius/compiler'
-require 'rubinius/ast'
-
-require 'parser/current'
-
-RBX = Rubinius::ToolSets.current
-
-class RubiniusBuilder < Parser::Builders::Default
+class CodeTools::Processor < Parser::Builders::Default
+  
+  AST = CodeTools::AST
   
   #
   # Literals
@@ -19,15 +12,15 @@ class RubiniusBuilder < Parser::Builders::Default
   # Singletons
   
   def nil(token)
-    RBX::AST::NilLiteral.new line(token)
+    AST::NilLiteral.new line(token)
   end
   
   def true(token)
-    RBX::AST::TrueLiteral.new line(token)
+    AST::TrueLiteral.new line(token)
   end
   
   def false(token)
-    RBX::AST::FalseLiteral.new line(token)
+    AST::FalseLiteral.new line(token)
   end
   
   # Numerics
@@ -40,8 +33,8 @@ class RubiniusBuilder < Parser::Builders::Default
   def numeric(token)
     value = value(token)
     value.is_a?(Bignum) ?
-      RBX::AST::NumberLiteral.new(line(token), value) :
-      RBX::AST::FixnumLiteral.new(line(token), value)
+      AST::NumberLiteral.new(line(token), value) :
+      AST::FixnumLiteral.new(line(token), value)
   end
   private :numeric
   
@@ -53,14 +46,14 @@ class RubiniusBuilder < Parser::Builders::Default
   def __LINE__(token)
     value = line(token)
     value.is_a?(Bignum) ?
-      RBX::AST::NumberLiteral.new(line(token), value) :
-      RBX::AST::FixnumLiteral.new(line(token), value)
+      AST::NumberLiteral.new(line(token), value) :
+      AST::FixnumLiteral.new(line(token), value)
   end
   
   # Strings
   
   def string(token)
-    RBX::AST::StringLiteral.new line(token), value(token)
+    AST::StringLiteral.new line(token), value(token)
   end
   
   def string_internal(token)
@@ -71,24 +64,24 @@ class RubiniusBuilder < Parser::Builders::Default
     dynamic, line, string, parts = compose_parts(parts)
     
     if dynamic
-      RBX::AST::DynamicString.new line, string, parts
+      AST::DynamicString.new line, string, parts
     else
       string
     end
   end
   
   def character(token)
-    RBX::AST::StringLiteral.new line(token), value(token)
+    AST::StringLiteral.new line(token), value(token)
   end
   
   def __FILE__(token)
-    RBX::AST::File.new line(token)
+    AST::File.new line(token)
   end
   
   # Symbols
   
   def symbol(token)
-    RBX::AST::SymbolLiteral.new line(token), value(token).to_sym
+    AST::SymbolLiteral.new line(token), value(token).to_sym
   end
   
   def symbol_internal(token)
@@ -99,9 +92,9 @@ class RubiniusBuilder < Parser::Builders::Default
     dynamic, line, string, parts = compose_parts(parts)
     
     if dynamic
-      RBX::AST::DynamicSymbol.new line, string, parts
+      AST::DynamicSymbol.new line, string, parts
     else
-      RBX::AST::SymbolLiteral.new line, string.string.to_sym
+      AST::SymbolLiteral.new line, string.string.to_sym
     end
   end
   
@@ -111,9 +104,9 @@ class RubiniusBuilder < Parser::Builders::Default
     dynamic, line, string, parts = compose_parts(parts)
     
     if dynamic
-      RBX::AST::DynamicExecuteString.new line, string, parts
+      AST::DynamicExecuteString.new line, string, parts
     else
-      RBX::AST::ExecuteString.new line, string.string
+      AST::ExecuteString.new line, string.string
     end
   end
   
@@ -141,10 +134,10 @@ class RubiniusBuilder < Parser::Builders::Default
     once, options = options
     
     if dynamic
-      once ? RBX::AST::DynamicOnceRegex.new(line, string, parts, options) :
-             RBX::AST::DynamicRegex    .new(line, string, parts, options)
+      once ? AST::DynamicOnceRegex.new(line, string, parts, options) :
+             AST::DynamicRegex    .new(line, string, parts, options)
     else
-      RBX::AST::RegexLiteral.new line, string.string, options
+      AST::RegexLiteral.new line, string.string, options
     end
   end
   
@@ -154,14 +147,14 @@ class RubiniusBuilder < Parser::Builders::Default
     line = line(begin_t)
     elements ||= []
     
-    if elements.detect { |x| x.is_a?(RBX::AST::SplatValue) }
+    if elements.detect { |x| x.is_a?(AST::SplatValue) }
       if elements.empty?
-        RBX::AST::NilLiteral.new line
+        AST::NilLiteral.new line
       elsif elements.one?
         element = elements.first
-        if element.is_a? RBX::AST::SplatValue
+        if element.is_a? AST::SplatValue
           if element.instance_variable_get :@sated
-            element = RBX::AST::ArrayLiteral.new line, [element]
+            element = AST::ArrayLiteral.new line, [element]
           else
             element.instance_variable_set :@sated, true
           end
@@ -171,22 +164,22 @@ class RubiniusBuilder < Parser::Builders::Default
         _make_concat_args(line, elements)
       end
     else
-      RBX::AST::ArrayLiteral.new line, elements
+      AST::ArrayLiteral.new line, elements
     end
   end
   
   def _make_concat_args(line, elements)
     rest = elements.pop
     rest = rest.value if rest.respond_to? :value
-    array = RBX::AST::ArrayLiteral.new line, elements
-    RBX::AST::ConcatArgs.new line, array, rest
+    array = AST::ArrayLiteral.new line, elements
+    AST::ConcatArgs.new line, array, rest
   end
   
   def splat(star_t, arg=nil)
     if arg
-      RBX::AST::SplatValue.new line(star_t), arg
+      AST::SplatValue.new line(star_t), arg
     else
-      RBX::AST::EmptySplat.new line(star_t), arg
+      AST::EmptySplat.new line(star_t), arg
     end
   end
   
@@ -195,21 +188,21 @@ class RubiniusBuilder < Parser::Builders::Default
   end
   
   def words_compose(begin_t, parts, end_t)
-    RBX::AST::ArrayLiteral.new line(begin_t), parts
+    AST::ArrayLiteral.new line(begin_t), parts
   end
   
   def symbols_compose(begin_t, parts, end_t)
     parts = parts.map do |part|
-      if part.class == RBX::AST::StringLiteral
-        RBX::AST::DynamicSymbol.new part.line, part.string, []
-      elsif part.class == RBX::AST::DynamicString
-        RBX::AST::DynamicSymbol.new part.line, part.string, part.array
+      if part.class == AST::StringLiteral
+        AST::DynamicSymbol.new part.line, part.string, []
+      elsif part.class == AST::DynamicString
+        AST::DynamicSymbol.new part.line, part.string, part.array
       else
         part
       end
     end
     
-    RBX::AST::ArrayLiteral.new line(begin_t), parts
+    AST::ArrayLiteral.new line(begin_t), parts
   end
   
   # Hashes
@@ -219,7 +212,7 @@ class RubiniusBuilder < Parser::Builders::Default
   end
   
   def pair_keyword(key_t, value)
-    key = RBX::AST::SymbolLiteral.new line(key_t), value(key_t).to_sym
+    key = AST::SymbolLiteral.new line(key_t), value(key_t).to_sym
     [key, value]
   end
   
@@ -229,17 +222,17 @@ class RubiniusBuilder < Parser::Builders::Default
   
   def associate(begin_t, pairs, end_t)
     pairs.each { |pair| pair[0] = nil if pair[0]==:kwsplat }
-    RBX::AST::HashLiteral.new line(begin_t), pairs.flatten
+    AST::HashLiteral.new line(begin_t), pairs.flatten
   end
   
   # Ranges
   
   def range_inclusive(lhs, dot2_t, rhs)
-    RBX::AST::Range.new line(dot2_t), lhs, rhs
+    AST::Range.new line(dot2_t), lhs, rhs
   end
   
   def range_exclusive(lhs, dot3_t, rhs)
-    RBX::AST::RangeExclude.new line(dot3_t), lhs, rhs
+    AST::RangeExclude.new line(dot3_t), lhs, rhs
   end
   
   #
@@ -247,49 +240,49 @@ class RubiniusBuilder < Parser::Builders::Default
   #
   
   def self(token)
-    RBX::AST::Self.new line(token)
+    AST::Self.new line(token)
   end
   
   def ident(token)
-    receiver = RBX::AST::Self.new line(token)
-    RBX::AST::Send.new line(token), receiver, value(token).to_sym, true
+    receiver = AST::Self.new line(token)
+    AST::Send.new line(token), receiver, value(token).to_sym, true
   end
   
   def ivar(token)
-    RBX::AST::InstanceVariableAccess.new line(token), value(token).to_sym
+    AST::InstanceVariableAccess.new line(token), value(token).to_sym
   end
   
   def gvar(token)
-    RBX::AST::GlobalVariableAccess.new line(token), value(token).to_sym
+    AST::GlobalVariableAccess.new line(token), value(token).to_sym
   end
   
   def cvar(token)
-    RBX::AST::ClassVariableAccess.new line(token), value(token).to_sym
+    AST::ClassVariableAccess.new line(token), value(token).to_sym
   end
   
   def back_ref(token)
-    RBX::AST::BackRef.new line(token), value(token)[1..-1].to_sym
+    AST::BackRef.new line(token), value(token)[1..-1].to_sym
   end
   
   def nth_ref(token)
-    RBX::AST::NthRef.new line(token), value(token)
+    AST::NthRef.new line(token), value(token)
   end
   
   def accessible(node)
-    if node.is_a?(RBX::AST::Send) && node.privately \
+    if node.is_a?(AST::Send) && node.privately \
     && @parser.static_env.declared?(node.name)
-      RBX::AST::LocalVariableAccess.new node.line, node.name
+      AST::LocalVariableAccess.new node.line, node.name
     else
       node
     end
   end
   
   def const(token)
-    RBX::AST::ConstantAccess.new line(token), value(token).to_sym
+    AST::ConstantAccess.new line(token), value(token).to_sym
   end
   
   def const_global(t_colon3, token)
-    RBX::AST::ToplevelConstant.new line(token), value(token).to_sym
+    AST::ToplevelConstant.new line(token), value(token).to_sym
   end
   
   def const_fetch(outer, t_colon2, token)
@@ -297,27 +290,27 @@ class RubiniusBuilder < Parser::Builders::Default
     name = value(token).to_sym
     
     if outer
-      if outer.kind_of? RBX::AST::ConstantAccess and
+      if outer.kind_of? AST::ConstantAccess and
          outer.name == :Rubinius
         case name
         when :Type
-          RBX::AST::TypeConstant.new line
+          AST::TypeConstant.new line
         when :Mirror
-          RBX::AST::MirrorConstant.new line
+          AST::MirrorConstant.new line
         else
-          RBX::AST::ScopedConstant.new line, outer, name
+          AST::ScopedConstant.new line, outer, name
         end
       else
-        RBX::AST::ScopedConstant.new line, outer, name
+        AST::ScopedConstant.new line, outer, name
       end
     else
-      RBX::AST::ConstantAccess.new line, name
+      AST::ConstantAccess.new line, name
     end
   end
   
   def __ENCODING__(__ENCODING__t)
     encoding_name = __ENCODING__t.first.encoding.name
-    RBX::AST::Encoding.new line(__ENCODING__t), encoding_name
+    AST::Encoding.new line(__ENCODING__t), encoding_name
   end
   
   #
@@ -325,12 +318,12 @@ class RubiniusBuilder < Parser::Builders::Default
   #
   
   def assignable(node)
-    if node.is_a?(RBX::AST::Send) && node.privately
+    if node.is_a?(AST::Send) && node.privately
       @parser.static_env.declare(node.name)
-      node = RBX::AST::LocalVariableAccess.new node.line, node.name
-    elsif node.is_a?(RBX::AST::LocalVariableAccess)
+      node = AST::LocalVariableAccess.new node.line, node.name
+    elsif node.is_a?(AST::LocalVariableAccess)
       @parser.static_env.declare(node.name)
-    elsif node.is_a?(RBX::AST::LocalVariableAssignment)
+    elsif node.is_a?(AST::LocalVariableAssignment)
       @parser.static_env.declare(node.name)
     end
     
@@ -349,12 +342,12 @@ class RubiniusBuilder < Parser::Builders::Default
     line = lhs.line
     name = value(op_t).to_sym
     
-    if lhs.is_a?(RBX::AST::Send)
+    if lhs.is_a?(AST::Send)
       if lhs.name == :[]
-        ary = RBX::AST::ArrayLiteral.new line, lhs.arguments.array
-        RBX::AST::OpAssignElement.new line, lhs.receiver, ary, name, rhs
+        ary = AST::ArrayLiteral.new line, lhs.arguments.array
+        AST::OpAssignElement.new line, lhs.receiver, ary, name, rhs
       else
-        RBX::AST::OpAssignAttribute.new line, lhs.receiver, lhs.name, name, rhs
+        AST::OpAssignAttribute.new line, lhs.receiver, lhs.name, name, rhs
       end
     else
       lhs = assignable(lhs)
@@ -362,13 +355,13 @@ class RubiniusBuilder < Parser::Builders::Default
       case name
       when :'&&'
         rhs_asgn = convert_to_assignment line, lhs, rhs
-        RBX::AST::OpAssignAnd.new line, lhs, rhs_asgn
+        AST::OpAssignAnd.new line, lhs, rhs_asgn
       when :'||'
         rhs_asgn = convert_to_assignment line, lhs, rhs
-        RBX::AST::OpAssignOr.new line, lhs, rhs_asgn
+        AST::OpAssignOr.new line, lhs, rhs_asgn
       else;
         convert_to_assignment line, lhs,
-          RBX::AST::SendWithArguments.new(line, lhs, name, rhs)
+          AST::SendWithArguments.new(line, lhs, name, rhs)
       end
     end
   end
@@ -382,7 +375,7 @@ class RubiniusBuilder < Parser::Builders::Default
     end
     
     items = items.map { |item| convert_to_assignment line, item, nil }
-    RBX::AST::ArrayLiteral.new line, items
+    AST::ArrayLiteral.new line, items
   end
   
   def param_multi_lhs(line, items)
@@ -393,13 +386,13 @@ class RubiniusBuilder < Parser::Builders::Default
       when :splat
         saw_splat = true
         if value == :*
-          masgn = RBX::AST::MultipleAssignment.new line, nil, nil, true
+          masgn = AST::MultipleAssignment.new line, nil, nil, true
           return [:masgn, masgn]
         end
-        value = RBX::AST::LocalVariableAssignment.new line, value
-        RBX::AST::SplatValue.new line, value
+        value = AST::LocalVariableAssignment.new line, value
+        AST::SplatValue.new line, value
       when :required
-        new_item = RBX::AST::LocalVariableAssignment.new line, value
+        new_item = AST::LocalVariableAssignment.new line, value
         saw_splat ? (post_items << new_item; nil) : new_item
       when :masgn
         value
@@ -407,15 +400,15 @@ class RubiniusBuilder < Parser::Builders::Default
         type
       end
     end.compact
-    lhs = RBX::AST::ArrayLiteral.new line, items
-    masgn = RBX::AST::MultipleAssignment.new line, lhs, nil, nil
-    post = RBX::AST::ArrayLiteral.new line, post_items
+    lhs = AST::ArrayLiteral.new line, items
+    masgn = AST::MultipleAssignment.new line, lhs, nil, nil
+    post = AST::ArrayLiteral.new line, post_items
     masgn.post = post unless post_items.empty?
     [:masgn, masgn]
   end
   
   def multi_assign(lhs, eql_t, rhs)
-    RBX::AST::MultipleAssignment.new line(eql_t), lhs, rhs, nil
+    AST::MultipleAssignment.new line(eql_t), lhs, rhs, nil
   end
   
   #
@@ -424,26 +417,26 @@ class RubiniusBuilder < Parser::Builders::Default
   
   def def_class(class_t, name, lt_t, superclass, body, end_t)
     line = line(class_t)
-    name = name.name if name.is_a? RBX::AST::ConstantAccess
+    name = name.name if name.is_a? AST::ConstantAccess
     body = prepare_module_body(line, body)
     
-    RBX::AST::Class.new line, name, superclass, body
+    AST::Class.new line, name, superclass, body
   end
   
   def def_sclass(class_t, lshft_t, expr, body, end_t)
     line = line(class_t)
-    name = name.name if name.is_a? RBX::AST::ConstantAccess
+    name = name.name if name.is_a? AST::ConstantAccess
     body = prepare_module_body(line, body)
     
-    RBX::AST::SClass.new line, expr, body
+    AST::SClass.new line, expr, body
   end
   
   def def_module(module_t, name, body, end_t)
     line = line(module_t)
-    name = name.name if name.is_a? RBX::AST::ConstantAccess
+    name = name.name if name.is_a? AST::ConstantAccess
     body = prepare_module_body(line, body)
     
-    RBX::AST::Module.new line, name, body
+    AST::Module.new line, name, body
   end
   
   #
@@ -453,43 +446,43 @@ class RubiniusBuilder < Parser::Builders::Default
   def def_method(def_t, name_t, args, body, end_t)
     line = line(def_t)
     name = value(name_t).to_sym
-    body = RBX::AST::Block.new line, [body] unless body.is_a? RBX::AST::Block
+    body = AST::Block.new line, [body] unless body.is_a? AST::Block
     body.array.unshift args
     
-    RBX::AST::Define.new line, name, body
+    AST::Define.new line, name, body
   end
   
   def def_singleton(def_t, definee, dot_t, name_t, args, body, end_t)
     line = line(def_t)
     name = value(name_t).to_sym
-    body = RBX::AST::Block.new line, [body] unless body.is_a? RBX::AST::Block
+    body = AST::Block.new line, [body] unless body.is_a? AST::Block
     body.array.unshift args
     
-    RBX::AST::DefineSingleton.new line, definee, name, body
+    AST::DefineSingleton.new line, definee, name, body
   end
   
   def undef_method(undef_t, names)
     line = line(undef_t)
-    compstmt names.map { |name| RBX::AST::Undef.new line, name }
+    compstmt names.map { |name| AST::Undef.new line, name }
   end
   
   def alias(alias_t, to, from)
-    if to.is_a? RBX::AST::GlobalVariableAccess
+    if to.is_a? AST::GlobalVariableAccess
       v_to = to.name
-    elsif to.is_a? RBX::AST::BackRef
+    elsif to.is_a? AST::BackRef
       v_to = :"$#{to.kind}"
     end
     
-    if from.is_a? RBX::AST::GlobalVariableAccess
+    if from.is_a? AST::GlobalVariableAccess
       v_from = from.name
-    elsif from.is_a? RBX::AST::BackRef
+    elsif from.is_a? AST::BackRef
       v_from = :"$#{from.kind}"
     end
     
     if v_to && v_from
-      RBX::AST::VAlias.new line(alias_t), v_to, v_from
+      AST::VAlias.new line(alias_t), v_to, v_from
     else
-      RBX::AST::Alias.new line(alias_t), to, from
+      AST::Alias.new line(alias_t), to, from
     end
   end
   
@@ -525,22 +518,22 @@ class RubiniusBuilder < Parser::Builders::Default
     if optional.empty?
       optional = nil
     else
-      optional.map! { |a| RBX::AST::LocalVariableAssignment.new *a }
-      optional = RBX::AST::Block.new line, optional
+      optional.map! { |a| AST::LocalVariableAssignment.new *a }
+      optional = AST::Block.new line, optional
     end
     
     if kwargs.empty?
       kwargs = nil
     else
-      kwargs.map! { |a| RBX::AST::LocalVariableAssignment.new *a }
-      kwargs = RBX::AST::Block.new line, kwargs
+      kwargs.map! { |a| AST::LocalVariableAssignment.new *a }
+      kwargs = AST::Block.new line, kwargs
     end
     
-    params = RBX::AST::Parameters.new line,
+    params = AST::Parameters.new line,
       required, optional, splat, post, kwargs, kwrest, block
     
     unless shadows.empty?
-      shadows = RBX::AST::ArrayLiteral.new line, shadows
+      shadows = AST::ArrayLiteral.new line, shadows
       params.instance_variable_set :@shadows, shadows
     end
     
@@ -561,7 +554,7 @@ class RubiniusBuilder < Parser::Builders::Default
   end
   
   def kwarg(name_t)
-    value = RBX::AST::SymbolLiteral.new line(name_t), :*
+    value = AST::SymbolLiteral.new line(name_t), :*
     [:kwarg, [line(name_t), value(name_t).to_sym, value]]
   end
   
@@ -574,7 +567,7 @@ class RubiniusBuilder < Parser::Builders::Default
   end
   
   def shadowarg(name_t)
-    shadow = RBX::AST::SymbolLiteral.new line(name_t), value(name_t).to_sym
+    shadow = AST::SymbolLiteral.new line(name_t), value(name_t).to_sym
     [:shadow, shadow]
   end
   
@@ -591,13 +584,13 @@ class RubiniusBuilder < Parser::Builders::Default
     line = receiver ? receiver.line : line(selector_t)
     name = selector_t ? value(selector_t).to_sym : :call
     vcall = receiver.nil?
-    receiver = RBX::AST::Self.new line if vcall
+    receiver = AST::Self.new line if vcall
     
     if args.empty?
-      RBX::AST::Send.new line, receiver, name, vcall
+      AST::Send.new line, receiver, name, vcall
     else
-      args = RBX::AST::ArrayLiteral.new line, args
-      RBX::AST::SendWithArguments.new line, receiver, name, args, vcall
+      args = AST::ArrayLiteral.new line, args
+      AST::SendWithArguments.new line, receiver, name, args, vcall
     end
   end
   
@@ -607,23 +600,23 @@ class RubiniusBuilder < Parser::Builders::Default
   
   def block(method_call, begin_t, args, body, end_t)
     if method_call == :lambda
-      return RBX::AST::Lambda.new line(begin_t), args, body
+      return AST::Lambda.new line(begin_t), args, body
     end
     
     shadows = args.instance_variable_get :@shadows
     if shadows
-      if body.is_a? RBX::AST::NilLiteral
-        body = RBX::AST::Block.new line(begin_t), []
+      if body.is_a? AST::NilLiteral
+        body = AST::Block.new line(begin_t), []
       end
       
-      unless body.is_a? RBX::AST::Block
-        body = RBX::AST::Block.new line(begin_t), [body]
+      unless body.is_a? AST::Block
+        body = AST::Block.new line(begin_t), [body]
       end
       
       body.locals = shadows
     end
     
-    method_call.block = RBX::AST::Iter.new line(begin_t), args, body
+    method_call.block = AST::Iter.new line(begin_t), args, body
     
     method_call
     
@@ -655,43 +648,43 @@ class RubiniusBuilder < Parser::Builders::Default
   end
   
   def block_pass(amper_t, arg)
-    RBX::AST::BlockPass.new line(amper_t), arg
+    AST::BlockPass.new line(amper_t), arg
   end
   
   def attr_asgn(receiver, dot_t, selector_t)
-    RBX::AST::AttributeAssignment.new \
+    AST::AttributeAssignment.new \
       line(dot_t), receiver, value(selector_t).to_sym, []
   end
   
   def index(receiver, lbrack_t, indexes, rbrack_t)
     line = line(lbrack_t)
-    args = RBX::AST::ArrayLiteral.new line, indexes
+    args = AST::ArrayLiteral.new line, indexes
     
-    RBX::AST::SendWithArguments.new line, receiver, :[], args
+    AST::SendWithArguments.new line, receiver, :[], args
   end
   
   def index_asgn(receiver, lbrack_t, indexes, rbrack_t)
     line = line(lbrack_t)
-    args = RBX::AST::ArrayLiteral.new line, indexes
+    args = AST::ArrayLiteral.new line, indexes
     
-    RBX::AST::ElementAssignment.new line, receiver, args
+    AST::ElementAssignment.new line, receiver, args
   end
   
   def binary_op(receiver, operator_t, arg)
     line = receiver.line
     name = value(operator_t).to_sym
     
-    RBX::AST::SendWithArguments.new line, receiver, name, arg
+    AST::SendWithArguments.new line, receiver, name, arg
   end
   
   def match_op(receiver, match_t, arg)
     line = receiver.line
     
-    if receiver.is_a? RBX::AST::DynamicRegex \
-    or receiver.is_a? RBX::AST::RegexLiteral
-      RBX::AST::Match2.new line, receiver, arg
+    if receiver.is_a? AST::DynamicRegex \
+    or receiver.is_a? AST::RegexLiteral
+      AST::Match2.new line, receiver, arg
     else
-      RBX::AST::Match3.new line, arg, receiver
+      AST::Match3.new line, arg, receiver
     end
   end
   
@@ -699,12 +692,12 @@ class RubiniusBuilder < Parser::Builders::Default
     method = value(op_t)
     method += '@' if '+'==method or '-'==method
     
-    RBX::AST::Send.new line(op_t), receiver, method.to_sym
+    AST::Send.new line(op_t), receiver, method.to_sym
   end
   
   def not_op(not_t, begin_t=nil, receiver=nil, end_t=nil)
-    # RBX::AST::Not.new line(not_t), receiver
-    RBX::AST::Send.new line(not_t), receiver, :'!'
+    # AST::Not.new line(not_t), receiver
+    AST::Send.new line(not_t), receiver, :'!'
   end
   
   #
@@ -718,43 +711,43 @@ class RubiniusBuilder < Parser::Builders::Default
     
     case type
     when :and
-      RBX::AST::And.new line, lhs, rhs
+      AST::And.new line, lhs, rhs
     when :or
-      RBX::AST::Or.new line, lhs, rhs
+      AST::Or.new line, lhs, rhs
     else
-      raise NotImplementedError, "RubiniusBuilder#logical_op type: #{type}"
+      raise NotImplementedError, "logical_op type: #{type}"
     end
   end
   
   # Conditionals
   
   def condition(cond_t, cond, then_t, if_true, else_t, if_false, end_t)
-    RBX::AST::If.new line(cond_t), check_condition(cond), if_true, if_false
+    AST::If.new line(cond_t), check_condition(cond), if_true, if_false
   end
   
   def condition_mod(if_true, if_false, cond_t, cond)
-    RBX::AST::If.new line(cond_t), check_condition(cond), if_true, if_false
+    AST::If.new line(cond_t), check_condition(cond), if_true, if_false
   end
   
   def ternary(cond, question_t, if_true, colon_t, if_false)
-    RBX::AST::If.new line(question_t), check_condition(cond), if_true, if_false
+    AST::If.new line(question_t), check_condition(cond), if_true, if_false
   end
   
   # Case matching
   
   def when(when_t, patterns, then_t, body)
-    patterns = RBX::AST::ArrayLiteral.new line(when_t), patterns
-    RBX::AST::When.new line(when_t), patterns, body
+    patterns = AST::ArrayLiteral.new line(when_t), patterns
+    AST::When.new line(when_t), patterns, body
   end
   
   def case(case_t, expr, when_bodies, else_t, else_body, end_t)
-    else_body = RBX::AST::Begin.new else_body.line, else_body \
-      if else_body.is_a? RBX::AST::NilLiteral
+    else_body = AST::Begin.new else_body.line, else_body \
+      if else_body.is_a? AST::NilLiteral
     
     if expr.nil?
-      RBX::AST::Case.new line(case_t), when_bodies, else_body
+      AST::Case.new line(case_t), when_bodies, else_body
     else
-      RBX::AST::ReceiverCase.new line(case_t), expr, when_bodies, else_body
+      AST::ReceiverCase.new line(case_t), expr, when_bodies, else_body
     end
   end
   
@@ -766,25 +759,25 @@ class RubiniusBuilder < Parser::Builders::Default
     
     case type
     when :while
-      RBX::AST::While.new line, check_condition(cond), body, check_first
+      AST::While.new line, check_condition(cond), body, check_first
     when :until
-      RBX::AST::Until.new line, check_condition(cond), body, check_first
+      AST::Until.new line, check_condition(cond), body, check_first
     else
-      raise NotImplementedError, "RubiniusBuilder#loop type: #{type}"
+      raise NotImplementedError, "loop type: #{type}"
     end
   end
   
   def loop_mod(type, body, keyword_t, cond)
     line = line(keyword_t)
-    check_first = !body.is_a?(RBX::AST::Begin)
+    check_first = !body.is_a?(AST::Begin)
     
     case type
     when :while
-      RBX::AST::While.new line, check_condition(cond), body, check_first
+      AST::While.new line, check_condition(cond), body, check_first
     when :until
-      RBX::AST::Until.new line, check_condition(cond), body, check_first
+      AST::Until.new line, check_condition(cond), body, check_first
     else
-      raise NotImplementedError, "RubiniusBuilder#loop_mod type: #{type}"
+      raise NotImplementedError, "loop_mod type: #{type}"
     end
   end
   
@@ -792,8 +785,8 @@ class RubiniusBuilder < Parser::Builders::Default
     line = line(for_t)
     iterator = convert_to_assignment line(in_t), iterator, nil
     
-    send = RBX::AST::Send.new line, iteratee, :each
-    send.block = RBX::AST::For.new line, iterator, body
+    send = AST::Send.new line, iteratee, :each
+    send.block = AST::For.new line, iterator, body
     send
   end
   
@@ -808,48 +801,48 @@ class RubiniusBuilder < Parser::Builders::Default
         element = elements.first
         
         if type == :yield or type == :super
-          if element.is_a?(RBX::AST::SplatValue)
+          if element.is_a?(AST::SplatValue)
             if (element.instance_variable_get :@sated)
-              element = RBX::AST::ArrayLiteral.new line, elements
+              element = AST::ArrayLiteral.new line, elements
             end
           else
-            element = RBX::AST::ArrayLiteral.new line, elements
+            element = AST::ArrayLiteral.new line, elements
           end
         end
         
         element
       else
         x = elements.last
-        if x.is_a?(RBX::AST::SplatValue) or x.is_a?(RBX::AST::Send) or x.is_a?(RBX::AST::SendWithArguments)
+        if x.is_a?(AST::SplatValue) or x.is_a?(AST::Send) or x.is_a?(AST::SendWithArguments)
           rest = elements.pop.value
-          array = RBX::AST::ArrayLiteral.new line, elements
-          RBX::AST::ConcatArgs.new line, array, rest
+          array = AST::ArrayLiteral.new line, elements
+          AST::ConcatArgs.new line, array, rest
         else
-          RBX::AST::ArrayLiteral.new line, elements
+          AST::ArrayLiteral.new line, elements
         end
       end
     
     case type
     when :return
-      RBX::AST::Return.new line, value
+      AST::Return.new line, value
     when :super
-      RBX::AST::Super.new line, value
+      AST::Super.new line, value
     when :zsuper
-      RBX::AST::ZSuper.new line
+      AST::ZSuper.new line
     when :defined?
-      RBX::AST::Defined.new line, value
+      AST::Defined.new line, value
     when :yield
-      RBX::AST::Yield.new line, value, true
+      AST::Yield.new line, value, true
     when :break
-      RBX::AST::Break.new line, value
+      AST::Break.new line, value
     when :redo
-      RBX::AST::Redo.new line
+      AST::Redo.new line
     when :retry
-      RBX::AST::Retry.new line
+      AST::Retry.new line
     when :next
-      RBX::AST::Next.new line, value
+      AST::Next.new line, value
     else
-      raise NotImplementedError, "RubiniusBuilder#keyword_cmd type: #{type}"
+      raise NotImplementedError, "keyword_cmd type: #{type}"
     end
   end
   
@@ -857,20 +850,20 @@ class RubiniusBuilder < Parser::Builders::Default
   
   def preexe(preexe_t, lbrace_t, compstmt, rbrace_t)
     line = line(preexe_t)
-    body = RBX::AST::Block.new line, [compstmt]
+    body = AST::Block.new line, [compstmt]
     
-    node = RBX::AST::PreExe19.new line
-    node.block = RBX::AST::Iter.new line, nil, body
+    node = AST::PreExe19.new line
+    node.block = AST::Iter.new line, nil, body
     # TODO: add_pre_exe node # as rubinius-processor does
     node
   end
   
   def postexe(postexe_t, lbrace_t, compstmt, rbrace_t)
     line = line(postexe_t)
-    body = RBX::AST::Block.new line, [compstmt]
+    body = AST::Block.new line, [compstmt]
     
-    node = RBX::AST::Send.new line, RBX::AST::Self.new(line), :at_exit, true
-    node.block = RBX::AST::Iter.new line, nil, body
+    node = AST::Send.new line, AST::Self.new(line), :at_exit, true
+    node.block = AST::Iter.new line, nil, body
     node
   end
   
@@ -879,14 +872,14 @@ class RubiniusBuilder < Parser::Builders::Default
   def rescue_body(rescue_t, exc_list, assoc_t, exc_var, then_t, compound_stmt)
     blk = if exc_var
       line = line(assoc_t)
-      last_e = RBX::AST::CurrentException.new line
+      last_e = AST::CurrentException.new line
       e_asgn = convert_to_assignment line, exc_var, last_e
-      RBX::AST::Block.new compound_stmt.line, [e_asgn, compound_stmt]
+      AST::Block.new compound_stmt.line, [e_asgn, compound_stmt]
     else
-      RBX::AST::Block.new compound_stmt.line, [compound_stmt]
+      AST::Block.new compound_stmt.line, [compound_stmt]
     end
     
-    RBX::AST::RescueCondition.new line(rescue_t), exc_list, blk, nil
+    AST::RescueCondition.new line(rescue_t), exc_list, blk, nil
   end
   
   def begin_body(compound_stmt, rescue_bodies=[],
@@ -905,11 +898,11 @@ class RubiniusBuilder < Parser::Builders::Default
     end
     
     if rescue_bodies.any?
-      compound_stmt = RBX::AST::Rescue.new line(else_t), compound_stmt, first, else_
+      compound_stmt = AST::Rescue.new line(else_t), compound_stmt, first, else_
     end
     
     if ensure_t
-      compound_stmt = RBX::AST::Ensure.new line(ensure_t), compound_stmt, ensure_
+      compound_stmt = AST::Ensure.new line(ensure_t), compound_stmt, ensure_
     end
     
     compound_stmt
@@ -922,18 +915,18 @@ class RubiniusBuilder < Parser::Builders::Default
   def compstmt(statements)
     case
     when statements.none?
-      RBX::AST::NilLiteral.new 0
+      AST::NilLiteral.new 0
     when statements.one?
       statements.first
     else
-      statements.map! { |s| s.class==RBX::AST::Block ? s.array : s }.flatten!
-      RBX::AST::Block.new statements.first.line, statements
+      statements.map! { |s| s.class==AST::Block ? s.array : s }.flatten!
+      AST::Block.new statements.first.line, statements
     end
   end
   
   def begin(begin_t, body, end_t)
     if body.nil?
-      RBX::AST::NilLiteral.new line(begin_t)
+      AST::NilLiteral.new line(begin_t)
     else
       body
     end
@@ -941,9 +934,9 @@ class RubiniusBuilder < Parser::Builders::Default
   
   def begin_keyword(begin_t, body, end_t)
     if body.nil?
-      RBX::AST::NilLiteral.new line(begin_t)
+      AST::NilLiteral.new line(begin_t)
     else
-      RBX::AST::Begin.new line(begin_t), body
+      AST::Begin.new line(begin_t), body
     end
   end
   
@@ -952,27 +945,27 @@ private
   def compose_parts(parts)
     line = parts.first ? parts.first.line : 0
     
-    if parts.detect { |part| part.class != RBX::AST::StringLiteral }
+    if parts.detect { |part| part.class != AST::StringLiteral }
       parts.map! do |part|
-        if part.class == RBX::AST::StringLiteral
+        if part.class == AST::StringLiteral
           part
-        elsif part.class == RBX::AST::DynamicString
-          str = RBX::AST::StringLiteral.new line, part.string
+        elsif part.class == AST::DynamicString
+          str = AST::StringLiteral.new line, part.string
           (part.string.empty? ? [] : [str]) + part.array
         else
-          RBX::AST::ToString.new line, part
+          AST::ToString.new line, part
         end
       end.flatten!
       
       # Get first non-dynamic part (or '')
-      first = parts.shift.string if parts.first.class == RBX::AST::StringLiteral
+      first = parts.shift.string if parts.first.class == AST::StringLiteral
       first ||= ''
       
       # Join adjacent non-dynamic parts
       clustered_parts = []
       [*parts].each do |element|
-        if clustered_parts.last.class == RBX::AST::StringLiteral \
-        && element.class == RBX::AST::StringLiteral
+        if clustered_parts.last.class == AST::StringLiteral \
+        && element.class == AST::StringLiteral
           clustered_parts.last.string += element.string
         else
           clustered_parts.push element
@@ -983,18 +976,18 @@ private
     elsif parts.one?
       return [false, line, parts.first, []]
     else
-      string = RBX::AST::StringLiteral.new line, parts.map(&:string).join
+      string = AST::StringLiteral.new line, parts.map(&:string).join
       return [false, line, string, []]
     end
   end
   
   def prepare_module_body(line, body)
-    if body.is_a?(RBX::AST::NilLiteral)
+    if body.is_a?(AST::NilLiteral)
       nil
-    elsif body.is_a?(RBX::AST::Block)
+    elsif body.is_a?(AST::Block)
       body
     else
-      RBX::AST::Block.new line, [body]
+      AST::Block.new line, [body]
     end
   end
   
@@ -1002,66 +995,65 @@ private
     kls = orig.class
     name = orig.name if orig.respond_to? :name
     
-    if kls == RBX::AST::SplatValue
+    if kls == AST::SplatValue
       orig.value = convert_to_assignment line, orig.value, value
       orig
-    elsif kls == RBX::AST::EmptySplat
+    elsif kls == AST::EmptySplat
       orig
-    elsif kls == RBX::AST::ArrayLiteral
-      RBX::AST::MultipleAssignment.new line, orig, value, nil
-    elsif kls == RBX::AST::Send
-      RBX::AST::LocalVariableAssignment.new line, name, value
-    elsif kls == RBX::AST::LocalVariableAccess
-      RBX::AST::LocalVariableAssignment.new line, name, value
-    elsif kls == RBX::AST::InstanceVariableAccess
-      RBX::AST::InstanceVariableAssignment.new line, name, value
-    elsif kls == RBX::AST::ClassVariableAccess
-      RBX::AST::ClassVariableAssignment.new line, name, value
-    elsif kls == RBX::AST::GlobalVariableAccess
-      RBX::AST::GlobalVariableAssignment.new line, name, value
-    elsif kls == RBX::AST::ConstantAccess
-      RBX::AST::ConstantAssignment.new line, name, value
-    elsif kls == RBX::AST::ToplevelConstant
-      RBX::AST::ConstantAssignment.new line, orig, value
-    elsif kls == RBX::AST::ScopedConstant
-      RBX::AST::ConstantAssignment.new line, orig, value
-    elsif kls == RBX::AST::AttributeAssignment
-      orig.arguments = RBX::AST::Arguments.new line, value
+    elsif kls == AST::ArrayLiteral
+      AST::MultipleAssignment.new line, orig, value, nil
+    elsif kls == AST::Send
+      AST::LocalVariableAssignment.new line, name, value
+    elsif kls == AST::LocalVariableAccess
+      AST::LocalVariableAssignment.new line, name, value
+    elsif kls == AST::InstanceVariableAccess
+      AST::InstanceVariableAssignment.new line, name, value
+    elsif kls == AST::ClassVariableAccess
+      AST::ClassVariableAssignment.new line, name, value
+    elsif kls == AST::GlobalVariableAccess
+      AST::GlobalVariableAssignment.new line, name, value
+    elsif kls == AST::ConstantAccess
+      AST::ConstantAssignment.new line, name, value
+    elsif kls == AST::ToplevelConstant
+      AST::ConstantAssignment.new line, orig, value
+    elsif kls == AST::ScopedConstant
+      AST::ConstantAssignment.new line, orig, value
+    elsif kls == AST::AttributeAssignment
+      orig.arguments = AST::Arguments.new line, value
       orig
-    elsif kls == RBX::AST::ElementAssignment
+    elsif kls == AST::ElementAssignment
       orig_args = orig.arguments.array
       
-      if value.is_a? RBX::AST::ConcatArgs
+      if value.is_a? AST::ConcatArgs
         value = value.array.tap { |ary| ary.body << value.rest }
       end
       
-      if orig_args.detect { |x| x.is_a? RBX::AST::SplatValue }
+      if orig_args.detect { |x| x.is_a? AST::SplatValue }
         push_args = if orig_args.count == 1
-          orig.arguments = RBX::AST::PushArgs.new line, orig_args.first, value
+          orig.arguments = AST::PushArgs.new line, orig_args.first, value
         else
           concat_args = _make_concat_args line, orig_args
-          orig.arguments = RBX::AST::PushArgs.new line, concat_args, value
+          orig.arguments = AST::PushArgs.new line, concat_args, value
         end
-        RBX::AST::ElementAssignment.new line, orig.receiver, push_args
+        AST::ElementAssignment.new line, orig.receiver, push_args
       else
         orig_args << value
         orig
       end
     else
-      raise NotImplementedError,
-        "RubiniusBuilder#convert_to_assignment with kls: #{kls}"
+      raise NotImplementedError, "convert_to_assignment with kls: #{kls}"
     end
   end
   
   def check_condition(cond)
     kls = cond.class
     
-    if    kls == RBX::AST::RegexLiteral
-      RBX::AST::Match.new cond.line, cond.source, cond.options
-    elsif kls == RBX::AST::Range
-      RBX::AST::Flip2.new cond.line, cond.start, cond.finish
-    elsif kls == RBX::AST::RangeExclude
-      RBX::AST::Flip3.new cond.line, cond.start, cond.finish
+    if    kls == AST::RegexLiteral
+      AST::Match.new cond.line, cond.source, cond.options
+    elsif kls == AST::Range
+      AST::Flip2.new cond.line, cond.start, cond.finish
+    elsif kls == AST::RangeExclude
+      AST::Flip3.new cond.line, cond.start, cond.finish
     else
       cond
     end
@@ -1071,61 +1063,22 @@ private
     token ? loc(token).line : 0
   end
   
-  # instance_methods.each do |sym|
-  #   deco sym do |*args, &block|
-  #     begin
-  #       (pp [sym, *args]; puts) if $SANDBOX_VERBOSE
-  #       deco_super *args, &block
-  #     rescue Exception=>e
-  #       p sym
-  #       puts; p e
-  #       puts; e.backtrace.each { |line| puts line }
-  #       puts
-  #       raise e
+  # # A crude call/argument/exception tracer for debugging
+  # this_class = self
+  # prepend Module.new {
+  #   this_class.instance_methods.each do |sym|
+  #     define_method sym do |*args, &block|
+  #       begin
+  #         (pp [sym, *args]; puts)
+  #         super *args, &block
+  #       rescue Exception=>e
+  #         p sym
+  #         puts; p e
+  #         puts; e.backtrace.each { |line| puts line }
+  #         puts
+  #         raise e
+  #       end
   #     end
   #   end
-  # end
-  
-end
-
-
-# class RBX::AST::MultipleAssignment
-#   class << self
-#     deco :new do |*args|
-#       pp [:MultipleAssignment_new, *args]
-#       puts args.last
-#       deco_super *args
-#     end
-#   end
-# end
-# class RBX::AST::ArrayLiteral
-#   class << self
-#     deco :new do |*args|
-#       pp [:ArrayLiteral_new, *args]
-#       puts args.last
-#       deco_super *args
-#     end
-#   end
-# end
-# class RBX::AST::Send
-#   class << self
-#     deco :new do |*args|
-#       pp [:Send_new, *args]
-#       puts args.last
-#       deco_super *args
-#     end
-#   end
-# end
-
-class String
-  def to_sexp
-    pr = Parser::CurrentRuby.new RubiniusBuilder.new
-
-    buffer = Parser::Source::Buffer.new('(string)')
-    buffer.source = self
-    
-    node = pr.parse buffer
-    # p node
-    node.to_sexp
-  end
+  # }
 end
