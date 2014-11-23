@@ -1334,12 +1334,12 @@ describe "An AST node" do
   
   # test_rational
   parse "42r" do
-    [:lit, (42/1)]
+    [:lit, 42r]
   end
   
   # test_rational
   parse "42.1r" do
-    [:lit, (421/10)]
+    [:lit, 42.1r]
   end
   
   # # ERROR in: test_arg_duplicate_proc
@@ -1396,22 +1396,22 @@ describe "An AST node" do
   
   # test_complex
   parse "42i" do
-    [:lit, (0+42i)]
+    [:lit, 42i]
   end
   
   # test_complex
   parse "42ri" do
-    [:lit, (0+42/1i)]
+    [:lit, 42ri]
   end
   
   # test_complex
   parse "42.1i" do
-    [:lit, (0+42.1i)]
+    [:lit, 42.1i]
   end
   
   # test_complex
   parse "42.1ri" do
-    [:lit, (0+421/10i)]
+    [:lit, 42.1ri]
   end
   
   # test_cpath
