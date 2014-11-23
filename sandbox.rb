@@ -472,9 +472,20 @@ class RubiniusBuilder < Parser::Builders::Default
   end
   
   def alias(alias_t, to, from)
-    if to  .is_a?(RBX::AST::GlobalVariableAccess) \
-    && from.is_a?(RBX::AST::GlobalVariableAccess)
-      RBX::AST::VAlias.new line(alias_t), to.name, from.name
+    if to.is_a? RBX::AST::GlobalVariableAccess
+      v_to = to.name
+    elsif to.is_a? RBX::AST::BackRef
+      v_to = :"$#{to.kind}"
+    end
+    
+    if from.is_a? RBX::AST::GlobalVariableAccess
+      v_from = from.name
+    elsif from.is_a? RBX::AST::BackRef
+      v_from = :"$#{from.kind}"
+    end
+    
+    if v_to && v_from
+      RBX::AST::VAlias.new line(alias_t), v_to, v_from
     else
       RBX::AST::Alias.new line(alias_t), to, from
     end
