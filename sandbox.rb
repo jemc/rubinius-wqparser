@@ -576,7 +576,7 @@ class RubiniusBuilder < Parser::Builders::Default
   def call_method(receiver, dot_t, selector_t,
                   lparen_t=nil, args=[], rparen_t=nil)
     line = receiver ? receiver.line : line(selector_t)
-    name = value(selector_t).to_sym
+    name = selector_t ? value(selector_t).to_sym : :call
     vcall = receiver.nil?
     receiver = RBX::AST::Self.new line if vcall
     
