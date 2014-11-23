@@ -358,15 +358,17 @@ class RubiniusBuilder < Parser::Builders::Default
       end
     else
       lhs = assignable(lhs)
-      rhs_asgn = convert_to_assignment(line, lhs, rhs)
       
       case name
-      when :'&&'; RBX::AST::OpAssignAnd.new line, lhs, rhs_asgn
-      when :'||'; RBX::AST::OpAssignOr.new line, lhs, rhs_asgn
+      when :'&&'
+        rhs_asgn = convert_to_assignment line, lhs, rhs
+        RBX::AST::OpAssignAnd.new line, lhs, rhs_asgn
+      when :'||'
+        rhs_asgn = convert_to_assignment line, lhs, rhs
+        RBX::AST::OpAssignOr.new line, lhs, rhs_asgn
       else;
-        RBX::AST::LocalVariableAssignment.new(line, lhs.name,
+        convert_to_assignment line, lhs,
           RBX::AST::SendWithArguments.new(line, lhs, name, rhs)
-        )
       end
     end
   end
