@@ -28,9 +28,9 @@ class CodeTools::Processor < Parser::Builders::Default
   def integer(token)
     value = value(token)
     if value.is_a?(Bignum)
-      AST::NumberLiteral.new(line(token), value)
+      AST::NumberLiteral.new line(token), value
     else
-      AST::FixnumLiteral.new(line(token), value)
+      AST::FixnumLiteral.new line(token), value
     end
   end
   
@@ -54,9 +54,9 @@ class CodeTools::Processor < Parser::Builders::Default
   def __LINE__(token)
     value = line(token)
     if value.is_a?(Bignum)
-      AST::NumberLiteral.new(line(token), value)
+      AST::NumberLiteral.new line(token), value
     else
-      AST::FixnumLiteral.new(line(token), value)
+      AST::FixnumLiteral.new line(token), value
     end
   end
   
