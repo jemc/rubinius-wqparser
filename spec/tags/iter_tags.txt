@@ -1,1 +1,8 @@
 fails:An Iter node is parsed from 'm { |; x| }'
+fails:An Iter node is parsed from 'm { |a; x| }'
+fails:An Iter node is parsed from 'm { |a=1; x| }'
+fails:An Iter node is parsed from 'm { |*; x| }'
+fails:An Iter node is parsed from 'm { |*a; x| }'
+fails:An Iter node is parsed from 'm { |&b; x| }'
+fails:An Iter node is parsed from 'm { |a,; x| }'
+fails:An Iter node is parsed from 'm { |a, b; x| }'
