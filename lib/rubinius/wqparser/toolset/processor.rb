@@ -1,6 +1,4 @@
 
-CodeTools.send :remove_const, :Processor
-
 class CodeTools::Processor < Parser::Builders::Default
   
   AST = CodeTools::AST

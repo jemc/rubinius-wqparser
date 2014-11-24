@@ -24,13 +24,26 @@ task :spec => dependencies do
 end
 
 task :sandbox do
-  $SANDBOX_VERBOSE = true
-  
   require_relative 'lib/rubinius/wqparser'
   
-  def parse str, &block
-    actual = str.to_sexp
-    puts "      : #{str}"
+  def parse source, &block
+    # require 'pry'
+    # binding.pry
+    ast = Rubinius::ToolSets::WQParser::FakeMelbourne \
+      .parse_string source, '(snippet)', 1
+    
+    # compiler = Rubinius::ToolSets::WQParser::Compiler.new :string, :ast
+    # compiler.parser.root Rubinius::ToolSets::WQParser::AST::Script
+    # compiler.parser.input source, '(snippet)', 1
+    # compiler.parser.run
+    # ast = compiler.parser.instance_variable_get(:@output).body
+    
+    # require 'pp'
+    puts ast.ascii_graph
+    puts
+    
+    actual = ast.to_sexp
+    puts "      : #{source}"
     puts "expect: #{block.call.inspect}"
     puts "actual: #{actual.inspect}"
     puts block.call == actual ? "PASS" : "FAIL"
