@@ -27,18 +27,9 @@ task :sandbox do
   require_relative 'lib/rubinius/wqparser'
   
   def parse source, &block
-    # require 'pry'
-    # binding.pry
     ast = Rubinius::ToolSets::WQParser::FakeMelbourne \
       .parse_string source, '(snippet)', 1
     
-    # compiler = Rubinius::ToolSets::WQParser::Compiler.new :string, :ast
-    # compiler.parser.root Rubinius::ToolSets::WQParser::AST::Script
-    # compiler.parser.input source, '(snippet)', 1
-    # compiler.parser.run
-    # ast = compiler.parser.instance_variable_get(:@output).body
-    
-    # require 'pp'
     puts ast.ascii_graph
     puts
     
